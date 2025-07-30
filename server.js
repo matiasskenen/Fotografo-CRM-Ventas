@@ -214,7 +214,7 @@ app.get('/albums/:albumId/photos', async (req, res) => {
     }
 
     try {
-        const { data: photos, error } = await supabase
+        const { data: photos, error } = await supabaseAdmin
             .from('photos')
             .select('id, watermarked_file_path, student_code, price, metadata')
             .eq('album_id', albumId);
