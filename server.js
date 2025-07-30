@@ -778,3 +778,8 @@ app.listen(PORT, () => {
     console.log(`Servidor backend escuchando en http://localhost:${PORT}`);
     console.log('¡Listo para la acción con Supabase, Sharp y Mercado Pago Webhooks!');
 });
+
+app.get('/config.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.send(`const BACKEND_URL = "${process.env.BACKEND_URL}";`);
+});

@@ -47,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem('currentAlbumPhotos');
 
         try {
-            const res = await fetch(`http://localhost:3000/albums/${albumId}/photos`);
+            const res = await fetch(`${BACKEND_URL}/albums/${albumId}/photos`);
             const data = await res.json();
 
             if (res.ok && data.photos?.length > 0) {
@@ -105,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 🔄 Inicializar álbumes recientes y selector
     (async () => {
         try {
-            const res = await fetch('http://localhost:3000/albums');
+            const res = await fetch(`${BACKEND_URL}/albums`);
             const data = await res.json();
 
             if (res.ok && data.albums) {
