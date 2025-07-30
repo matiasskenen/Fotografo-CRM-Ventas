@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma de Fotos Escolares</title>
+    <title>Galería de Fotos - Plataforma Escolar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -12,6 +12,9 @@
             font-family: 'Inter', sans-serif;
             background-color: #f0f2f5;
             color: #333;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
         /* Contenedor principal para centrar el contenido */
         .container {
@@ -71,29 +74,6 @@
             pointer-events: none; /* Permite que los clics pasen a la imagen de abajo */
             z-index: 1;
         }
-        /* Estilos para el modal */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.75);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-        }
-        .modal-content {
-            background-color: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            padding: 24px;
-            max-width: 90%;
-            max-height: 90%;
-            overflow: auto; /* Permite scroll si el contenido es muy grande */
-            position: relative;
-        }
         /* Estilos para los mensajes de estado */
         .message {
             padding: 12px;
@@ -141,18 +121,105 @@
             padding: 15px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.05);
             text-align: center;
+            position: relative; /* For watermark overlay */
+            display: flex; /* Make photo-item a flex container */
+            flex-direction: column; /* Stack image and text vertically */
+            justify-content: space-between; /* Push info to bottom */
         }
+        /* Ajuste de tamaño para las imágenes en la galería */
         .photo-item img {
             max-width: 100%;
-            height: auto;
+            height: 200px; /* Altura fija para todas las miniaturas */
+            object-fit: cover; /* Recorta la imagen para que cubra el área */
             border-radius: 6px;
             margin-bottom: 10px;
+        }
+        /* Estilos para el modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto; /* Permite scroll si el contenido es muy grande */
+            position: relative;
+        }
+        /* Ajuste de tamaño para la imagen en el modal */
+        .modal-content img {
+            max-width: 100%;
+            max-height: 400px; /* Altura máxima para la imagen del modal */
+            width: auto; /* Permite que el ancho se ajuste proporcionalmente */
+            object-fit: contain; /* Asegura que la imagen completa sea visible */
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        /* Estilos específicos para ítems del carrito dentro del modal */
+        .cart-item-modal {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .cart-item-modal:last-child {
+            border-bottom: none;
+        }
+        .cart-item-modal img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-right: 15px;
+        }
+        .cart-item-modal-info {
+            flex-grow: 1;
+            text-align: left;
+        }
+        .cart-item-modal-info h4 {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .cart-item-modal-info p {
+            font-size: 0.875rem;
+            color: #666;
+        }
+        .cart-item-modal-actions {
+            flex-shrink: 0;
+        }
+        .cart-total-summary {
+            text-align: right;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+        .cart-total-summary p {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .cart-total-summary .total-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #4f46e5;
         }
     </style>
 </head>
 <body class="min-h-screen flex flex-col">
 
-    <!-- Encabezado de la página -->
+    <!-- Header -->
     <header class="bg-white shadow-md py-4">
         <div class="container flex justify-between items-center">
             <div class="text-2xl font-bold text-indigo-700">
@@ -160,140 +227,112 @@
             </div>
             <nav>
                 <ul class="flex space-x-6">
-                    <li><a href="#" class="text-gray-700 hover:text-indigo-600 font-medium" onclick="showSection('home-section'); return false;">Inicio</a></li>
+                    <li><a href="index.html" class="text-gray-700 hover:text-indigo-600 font-medium">Inicio</a></li>
                     <li><a href="#" class="text-gray-700 hover:text-indigo-600 font-medium">Cómo Funciona</a></li>
                     <li><a href="#" class="text-gray-700 hover:text-indigo-600 font-medium">Contacto</a></li>
-                    <li><a href="#" class="text-gray-700 hover:text-indigo-600 font-medium" onclick="showSection('cart-section'); return false;">Carrito (<span id="cart-count">0</span>)</a></li>
+                    <li><a href="#" class="text-gray-700 hover:text-indigo-600 font-medium" id="cartLink">Carrito (<span id="cart-count">0</span>)</a></li>
                 </ul>
             </nav>
         </div>
     </header>
 
-    <!-- Contenido principal -->
+    <!-- Main Content -->
     <main class="flex-grow container py-8">
+        <div class="card p-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Buscar Fotos Escolares</h1>
 
-        <!-- Sección de Inicio (Home) -->
-        <section id="home-section" class="mb-12 text-center">
-            <div class="card p-8">
-                <h1 class="text-5xl font-extrabold text-indigo-800 mb-4">👋 ¡Encuentra las Fotos Escolares de tus Hijos!</h1>
-                <p class="text-lg text-gray-600 mb-8">Explora nuestras galerías, previsualiza y compra en alta calidad.</p>
-
-                <div class="flex flex-col md:flex-row items-center justify-center gap-4 mb-8">
-                    <input type="text" id="albumIdInput" placeholder="Buscar por ID de Álbum o Código de Alumno" class="p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 flex-grow">
-                    <button id="searchButton" class="btn-primary w-full md:w-auto">BUSCAR FOTOS</button>
-                </div>
-
-                <div class="mt-12">
-                    <h2 class="text-2xl font-semibold text-gray-700 mb-6">--- Colegios Destacados ---</h2>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-6">
-                        <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-200">
-                            <img src="https://placehold.co/100x100/e0e7ff/4f46e5?text=Logo" alt="Logo Colegio A" class="mx-auto mb-4 rounded-full">
-                            <h3 class="text-xl font-semibold mb-2">Colegio A</h3>
-                            <button class="btn-secondary" onclick="simulateSearch('1e0ee2b0-1c9d-4b3d-a912-d0799579c87f'); return false;">Ver Galería</button>
-                        </div>
-                        <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-200">
-                            <img src="https://placehold.co/100x100/e0e7ff/4f46e5?text=Logo" alt="Logo Colegio B" class="mx-auto mb-4 rounded-full">
-                            <h3 class="text-xl font-semibold mb-2">Colegio B</h3>
-                            <button class="btn-secondary" onclick="simulateSearch('album-id-colegio-b'); return false;">Ver Galería</button>
-                        </div>
-                        <div class="bg-white rounded-xl shadow-lg p-6 text-center border border-gray-200">
-                            <img src="https://placehold.co/100x100/e0e7ff/4f46e5?text=Logo" alt="Logo Colegio C" class="mx-auto mb-4 rounded-full">
-                            <h3 class="text-xl font-semibold mb-2">Colegio C</h3>
-                            <button class="btn-secondary" onclick="simulateSearch('album-id-colegio-c'); return false;">Ver Galería</button>
-                        </div>
-                    </div>
-                </div>
+            <!-- Selector de colegios/álbumes disponibles -->
+            <div class="mb-4 flex flex-col md:flex-row gap-2">
+                <label for="albumSelector" class="block mb-2 font-medium text-gray-700 sr-only">Seleccionar Colegio / Álbum:</label>
+                <select id="albumSelector" class="input-field flex-1">
+                    <option value="">-- Elegí un colegio / álbum --</option>
+                    <!-- Opciones de álbumes se cargarán aquí dinámicamente -->
+                </select>
+                <button id="searchButton" class="btn-primary flex-shrink-0">Buscar Fotos</button>
             </div>
-        </section>
 
-        <!-- Sección de Galería de Fotos (inicialmente oculta) -->
-        <section id="gallery-section" class="mb-12 hidden">
-            <div class="card p-8">
-                <a href="#" class="text-indigo-600 hover:underline mb-6 inline-block" onclick="showSection('home-section'); return false;">< Volver a la Búsqueda</a>
-                <h2 class="text-3xl font-bold text-gray-800 mb-6" id="gallery-title">Fotos de: Álbum Seleccionado</h2>
+            <!-- Mensajes de estado y carga -->
+            <div id="message" class="message hidden"></div>
+            <div id="loading" class="text-center mt-4 hidden">
+                <span class="loading-spinner"></span> Cargando fotos...
+            </div>
 
-                <div class="flex flex-col md:flex-row items-center gap-4 mb-8">
-                    <select class="p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 md:w-1/3">
-                        <option>Filtrar por Evento/Fecha ▼</option>
-                        <option>Acto Fin de Año 2024</option>
-                        <option>Día del Niño 2024</option>
-                    </select>
-                    <input type="text" placeholder="Buscar por Código de Alumno" class="p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 flex-grow">
-                </div>
-                
-                <div id="message" class="message hidden"></div>
-                <div id="loading" class="text-center hidden">
-                    <span class="loading-spinner"></span> Cargando fotos...
-                </div>
+            <!-- Álbumes recientes (si los hay) - Siempre visible -->
+            <h2 class="text-xl font-semibold text-gray-700 mb-4 mt-8" id="recentAlbumsTitle">Últimos Álbumes / Destacados</h2>
+            <div id="recentAlbumsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                <!-- Tarjetas de álbumes recientes se cargarán aquí dinámicamente por JS -->
+                <p class="text-gray-500 col-span-full text-center" id="noRecentAlbumsMessage">No hay álbumes recientes disponibles.</p>
+            </div>
 
-                <div id="galleryContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <!-- Contenedor para Galería y Checkout (inicialmente oculto, aparece al buscar) -->
+            <div id="contentAfterSearch" class="hidden"> 
+                <!-- Galería de Fotos -->
+                <h2 class="text-xl font-semibold text-gray-700 mb-4 mt-8" id="galleryTitle">Fotos del Álbum:</h2>
+                <div id="galleryContainer" class="photo-grid">
                     <!-- Las fotos se cargarán aquí dinámicamente -->
+                    <p class="text-gray-500 col-span-full text-center" id="noPhotosMessage">No se han cargado fotos. Usa el buscador.</p>
                 </div>
 
-                <div class="flex justify-center mt-8 space-x-2">
-                    <button class="btn-secondary px-4 py-2">1</button>
-                    <button class="btn-primary px-4 py-2">2</button>
-                    <button class="btn-secondary px-4 py-2">3</button>
-                    <span class="p-2">...</span>
-                    <button class="btn-secondary px-4 py-2">Siguiente ></button>
-                </div>
+                <!-- ELIMINADO: Botón de Checkout en la galería principal -->
+                <!-- <div class="mt-8 text-right">
+                    <button id="checkoutButton" class="btn-primary">Ir a Pagar (<span id="cart-total-checkout">$0.00</span> ARS)</button>
+                </div> -->
             </div>
-        </section>
-
-        <!-- Sección del Carrito de Compras (inicialmente oculta) -->
-        <section id="cart-section" class="mb-12 hidden">
-            <div class="card p-8">
-                <a href="#" class="text-indigo-600 hover:underline mb-6 inline-block" onclick="showSection('gallery-section'); return false;">< Volver a la Galería</a>
-                <h2 class="text-3xl font-bold text-gray-800 mb-6">Tu Carrito de Compras</h2>
-
-                <div id="cart-items-container" class="border-t border-b border-gray-200 py-4 mb-6">
-                    <!-- Los ítems del carrito se cargarán aquí dinámicamente -->
-                    <p id="empty-cart-message" class="text-gray-500 text-center py-4">El carrito está vacío.</p>
-                </div>
-
-                <div class="text-right text-xl font-semibold mb-4">
-                    <p>Subtotal: $<span id="cart-subtotal">0.00</span> ARS</p>
-                    <p class="text-3xl font-bold text-indigo-700 mt-2">Total a Pagar: $<span id="cart-total">0.00</span> ARS</p>
-                </div>
-
-                <div class="flex flex-col sm:flex-row justify-end gap-4">
-                    <button id="checkoutButton" class="btn-primary w-full sm:w-auto">IR A PAGAR (Mercado Pago)</button>
-                    <button class="btn-secondary w-full sm:w-auto" onclick="showSection('gallery-section'); return false;">Seguir Comprando</button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Modal de Detalle de Foto / Compra (inicialmente oculto) -->
-        <section id="photo-detail-modal" class="modal hidden">
-            <div class="modal-content flex flex-col md:flex-row gap-6">
-                <!-- Botón para cerrar el modal -->
-                <button class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl" onclick="hidePhotoDetailModal()">&times;</button>
-                <div class="relative md:w-2/3">
-                    <!-- Imagen grande con marca de agua -->
-                    <img id="modal-photo-img" src="" alt="Foto Detallada" class="w-full h-auto rounded-lg">
-                    <div class="watermark-overlay"></div>
-                </div>
-                <div class="md:w-1/3 flex flex-col justify-between">
-                    <div>
-                        <!-- Información de la foto -->
-                        <h3 id="modal-photo-title" class="text-2xl font-bold mb-2"></h3>
-                        <p class="text-gray-600 mb-1">**Evento:** <span id="modal-photo-event"></span></p>
-                        <p class="text-gray-600 mb-4">**Colegio:** <span id="modal-photo-school"></span></p>
-                        <p id="modal-photo-price" class="text-4xl font-extrabold text-indigo-700 mb-6"></p>
-                    </div>
-                    <div>
-                        <!-- Botones de acción -->
-                        <button id="modal-add-to-cart-btn" class="btn-primary w-full mb-3">AÑADIR AL CARRITO</button>
-                        <button class="btn-secondary w-full">COMPRAR AHORA</button>
-                        <p class="text-sm text-gray-500 mt-4 text-center">*Al comprar, recibirás la foto en alta resolución y sin marca de agua.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
+        </div>
     </main>
 
-    <!-- Pie de página -->
+    <!-- Modal de Detalle de Foto / Compra (inicialmente oculto) -->
+    <section id="photo-detail-modal" class="modal hidden">
+        <div class="modal-content flex flex-col md:flex-row gap-6">
+            <!-- Botón para cerrar el modal -->
+            <button class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl" onclick="hidePhotoDetailModal()">&times;</button>
+            <div class="relative md:w-2/3">
+                <!-- Imagen grande con marca de agua -->
+                <img id="modal-photo-img" src="" alt="Foto Detallada" class="w-full h-auto rounded-lg">
+                <div class="watermark-overlay"></div>
+            </div>
+            <div class="md:w-1/3 flex flex-col justify-between">
+                <div>
+                    <!-- Información de la foto -->
+                    <h3 id="modal-photo-title" class="text-2xl font-bold mb-2"></h3>
+                    <p class="text-gray-600 mb-1">**Evento:** <span id="modal-photo-event"></span></p>
+                    <p class="text-gray-600 mb-4">**Colegio:** <span id="modal-photo-school"></span></p>
+                    <p id="modal-photo-price" class="text-4xl font-extrabold text-indigo-700 mb-6"></p>
+                </div>
+                <div>
+                    <!-- Botones de acción -->
+                    <button id="modal-add-to-cart-btn" class="btn-primary w-full mb-3">AÑADIR AL CARRITO</button>
+                    <button id="modal-buy-now-btn" class="btn-secondary w-full">COMPRAR AHORA</button>
+                    <p class="text-sm text-gray-500 mt-4 text-center">*Al comprar, recibirás la foto en alta resolución y sin marca de agua.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- NUEVO MODAL DE CARRITO -->
+    <section id="cart-modal" class="modal hidden">
+        <div class="modal-content w-full max-w-2xl">
+            <button class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl" onclick="hideCartModal()">&times;</button>
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 text-center">🛒 Tu Carrito de Compras</h2>
+
+            <div id="cart-modal-items-container" class="border-t border-b border-gray-200 py-4 mb-6">
+                <!-- Los ítems del carrito se cargarán aquí dinámicamente -->
+                <p id="cart-modal-empty-message" class="text-gray-500 text-center py-4">El carrito está vacío.</p>
+            </div>
+
+            <div class="cart-total-summary">
+                <p>Subtotal: $<span id="cart-modal-subtotal">0.00</span> ARS</p>
+                <p class="total-price">Total a Pagar: $<span id="cart-modal-total">0.00</span> ARS</p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-end gap-4 mt-6">
+                <button id="cart-modal-checkout-btn" class="btn-primary w-full sm:w-auto">IR A PAGAR (Mercado Pago)</button>
+                <button class="btn-secondary w-full sm:w-auto" onclick="hideCartModal()">Seguir Comprando</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
     <footer class="bg-gray-800 text-white py-6 mt-auto">
         <div class="container text-center text-sm">
             <p>&copy; 2025 [Nombre del Fotógrafo]. Todos los derechos reservados.</p>
@@ -306,64 +345,73 @@
     </footer>
 
     <script>
-        // --- Variables y Elementos del DOM ---
-        const homeSection = document.getElementById('home-section');
-        const gallerySection = document.getElementById('gallery-section');
-        const cartSection = document.getElementById('cart-section');
-        const photoDetailModal = document.getElementById('photo-detail-modal');
+        // --- Constante para la URL del Backend ---
+        const BACKEND_URL = "http://localhost:3000"; // O tu URL de ngrok en producción
 
-        const albumIdInput = document.getElementById('albumIdInput');
+        // --- DOM Elements ---
+        const albumSelector = document.getElementById('albumSelector');
         const searchButton = document.getElementById('searchButton');
-        const galleryContainer = document.getElementById('galleryContainer');
-        const galleryTitle = document.getElementById('gallery-title');
         const messageDiv = document.getElementById('message');
         const loadingDiv = document.getElementById('loading');
-
+        const recentAlbumsContainer = document.getElementById('recentAlbumsContainer');
+        const recentAlbumsTitle = document.getElementById('recentAlbumsTitle');
+        const galleryContainer = document.getElementById('galleryContainer');
+        const galleryTitle = document.getElementById('galleryTitle');
+        const noPhotosMessage = document.getElementById('noPhotosMessage');
+        // const checkoutButton = document.getElementById('checkoutButton'); // ELIMINADO
         const cartCountSpan = document.getElementById('cart-count');
-        const cartItemsContainer = document.getElementById('cart-items-container');
-        const emptyCartMessage = document.getElementById('empty-cart-message');
-        const cartSubtotalSpan = document.getElementById('cart-subtotal');
-        const cartTotalSpan = document.getElementById('cart-total');
-        const checkoutButton = document.getElementById('checkoutButton');
+        // const cartTotalCheckoutSpan = document.getElementById('cart-total-checkout'); // ELIMINADO
+        const contentAfterSearch = document.getElementById('contentAfterSearch'); // New container for dynamic content
+        const noRecentAlbumsMessage = document.getElementById('noRecentAlbumsMessage'); // New element for no recent albums
 
-        let currentAlbumPhotos = []; // Almacena las fotos del álbum actual para el carrito
+        // Modal elements
+        const photoDetailModal = document.getElementById('photo-detail-modal');
+        const modalPhotoImg = document.getElementById('modal-photo-img');
+        const modalPhotoTitle = document.getElementById('modal-photo-title');
+        const modalPhotoEvent = document.getElementById('modal-photo-event');
+        const modalPhotoSchool = document.getElementById('modal-photo-school');
+        const modalPhotoPrice = document.getElementById('modal-photo-price');
+        const modalAddToCartBtn = document.getElementById('modal-add-to-cart-btn');
+        const modalBuyNowBtn = document.getElementById('modal-buy-now-btn');
 
-        // --- Funciones de Utilidad ---
+        // Cart Modal Elements
+        const cartLink = document.getElementById('cartLink');
+        const cartModal = document.getElementById('cart-modal');
+        const cartModalItemsContainer = document.getElementById('cart-modal-items-container');
+        const cartModalEmptyMessage = document.getElementById('cart-modal-empty-message');
+        const cartModalSubtotalSpan = document.getElementById('cart-modal-subtotal');
+        const cartModalTotalSpan = document.getElementById('cart-modal-total');
+        const cartModalCheckoutBtn = document.getElementById('cart-modal-checkout-btn');
+
+
+        let currentAlbumPhotos = []; // Stores photos for the current album in gallery
+
+        // --- Utility Functions ---
         const showMessage = (msg, type) => {
             messageDiv.textContent = msg;
-            messageDiv.className = 'message'; // Resetea clases
-            if (type) {
-                messageDiv.classList.add(type);
-            }
+            messageDiv.className = 'message';
+            messageDiv.classList.add(type);
             messageDiv.classList.remove('hidden');
         };
 
         const hideMessage = () => {
             messageDiv.classList.add('hidden');
+            messageDiv.textContent = '';
         };
 
         const setLoading = (isLoading) => {
             loadingDiv.classList.toggle('hidden', !isLoading);
             searchButton.disabled = isLoading;
-            albumIdInput.disabled = isLoading;
-            checkoutButton.disabled = isLoading;
-        };
-
-        // Función para mostrar la sección correcta y ocultar las demás
-        const showSection = (sectionId) => {
-            homeSection.classList.add('hidden');
-            gallerySection.classList.add('hidden');
-            cartSection.classList.add('hidden');
-            photoDetailModal.classList.add('hidden'); // Siempre ocultar el modal
-
-            document.getElementById(sectionId).classList.remove('hidden');
-
-            if (sectionId === 'cart-section') {
-                renderCart(); // Asegura que el carrito se renderice al mostrar la sección
+            albumSelector.disabled = isLoading;
+            // checkoutButton.disabled = isLoading; // ELIMINADO
+            cartModalCheckoutBtn.disabled = isLoading; // Disable cart modal checkout button
+            if (!photoDetailModal.classList.contains('hidden')) {
+                modalAddToCartBtn.disabled = isLoading;
+                modalBuyNowBtn.disabled = isLoading;
             }
         };
 
-        // --- Lógica del Carrito ---
+        // --- Cart Logic ---
         const getCart = () => JSON.parse(localStorage.getItem('cart')) || [];
         const saveCart = (cart) => localStorage.setItem('cart', JSON.stringify(cart));
 
@@ -373,97 +421,14 @@
             const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             
             cartCountSpan.textContent = cartCount;
-            cartSubtotalSpan.textContent = cartTotal.toFixed(2);
-            cartTotalSpan.textContent = cartTotal.toFixed(2);
+            // cartTotalCheckoutSpan.textContent = cartTotal.toFixed(2); // ELIMINADO
 
-            if (cartCount > 0) {
-                checkoutButton.disabled = false;
-            } else {
-                checkoutButton.disabled = true;
-            }
+            // Update cart modal totals (if modal is open or for consistency)
+            cartModalSubtotalSpan.textContent = cartTotal.toFixed(2);
+            cartModalTotalSpan.textContent = cartTotal.toFixed(2);
+            cartModalCheckoutBtn.disabled = (cartCount === 0);
         };
 
-        const renderCart = () => {
-            const cart = getCart();
-            cartItemsContainer.innerHTML = ''; // Limpiar items existentes
-
-            if (cart.length === 0) {
-                emptyCartMessage.classList.remove('hidden');
-                cartItemsContainer.appendChild(emptyCartMessage);
-            } else {
-                emptyCartMessage.classList.add('hidden');
-                cart.forEach(item => {
-                    const cartItemDiv = document.createElement('div');
-                    cartItemDiv.className = 'flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0';
-                    cartItemDiv.innerHTML = `
-                        <div class="flex items-center gap-4">
-                            <div class="relative w-24 h-16 rounded-md overflow-hidden">
-                                <img src="${item.watermarkedUrl}" alt="Miniatura Foto">
-                                <div class="watermark-overlay"></div>
-                            </div>
-                            <div>
-                                <h4 class="font-semibold text-lg">Foto Código: ${item.studentCode || 'N/A'}</h4>
-                                <p class="text-gray-600">Precio: $${item.price.toFixed(2)} ARS</p>
-                                <p class="text-gray-600">Cantidad: ${item.quantity}</p>
-                            </div>
-                        </div>
-                        <button class="text-red-500 hover:text-red-700 font-medium" data-photo-id="${item.photoId}">Eliminar</button>
-                    `;
-                    cartItemsContainer.appendChild(cartItemDiv);
-                });
-            }
-            updateCartUI();
-        };
-
-        // --- Lógica de la Galería y Detalle de Foto ---
-        const renderPhotos = (photos) => {
-            galleryContainer.innerHTML = '';
-            if (photos.length === 0) {
-                showMessage('No se encontraron fotos para este álbum.', 'info');
-                return;
-            }
-            photos.forEach(photo => {
-                const photoItem = document.createElement('div');
-                photoItem.className = 'relative bg-gray-100 rounded-lg overflow-hidden shadow-md group cursor-pointer';
-                photoItem.innerHTML = `
-                    <img src="${photo.public_watermarked_url}" alt="Foto de evento" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-105">
-                    <div class="watermark-overlay"></div>
-                    <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <button class="btn-primary text-sm px-4 py-2" data-photo-id="${photo.id}">Ver / Comprar</button>
-                    </div>
-                `;
-                // Añadir evento de clic para mostrar el modal de detalle
-                photoItem.querySelector('button').addEventListener('click', () => {
-                    showPhotoDetailModal(photo);
-                });
-                galleryContainer.appendChild(photoItem);
-            });
-            showMessage(`Se encontraron ${photos.length} fotos.`, 'success');
-        };
-
-        const showPhotoDetailModal = (photo) => {
-            document.getElementById('modal-photo-img').src = photo.public_watermarked_url;
-            document.getElementById('modal-photo-title').textContent = `Foto Código: ${photo.student_code || 'N/A'}`;
-            // Asumiendo que el álbum tiene un nombre y colegio. Esto se obtendría del backend.
-            document.getElementById('modal-photo-event').textContent = `Evento del Álbum`; 
-            document.getElementById('modal-photo-school').textContent = `Nombre del Colegio`;
-            document.getElementById('modal-photo-price').textContent = `Precio: $${photo.price.toFixed(2)} ARS`;
-            
-            // Configurar el botón "Añadir al Carrito" del modal
-            const modalAddToCartBtn = document.getElementById('modal-add-to-cart-btn');
-            modalAddToCartBtn.onclick = () => {
-                addToCart(photo);
-                hidePhotoDetailModal(); // Ocultar modal después de añadir al carrito
-            };
-
-            photoDetailModal.classList.remove('hidden');
-        };
-
-        const hidePhotoDetailModal = () => {
-            photoDetailModal.classList.add('hidden');
-        };
-
-        // --- Lógica para Añadir/Eliminar del Carrito ---
         const addToCart = (photoToAdd) => {
             let cart = getCart();
             const existingItem = cart.find(item => item.photoId === photoToAdd.id);
@@ -474,7 +439,7 @@
             } else {
                 cart.push({
                     photoId: photoToAdd.id,
-                    albumId: photoToAdd.album_id, // Asegúrate de que photoToAdd tenga album_id
+                    albumId: photoToAdd.album_id,
                     watermarkedUrl: photoToAdd.public_watermarked_url,
                     price: photoToAdd.price,
                     studentCode: photoToAdd.student_code,
@@ -491,37 +456,236 @@
             cart = cart.filter(item => item.photoId !== photoId);
             saveCart(cart);
             showMessage('Foto eliminada del carrito.', 'info');
-            renderCart(); // Re-renderizar el carrito
+            renderCartModal(); // Re-render the cart modal after removal
         };
 
-        // --- Manejadores de Eventos ---
+        const renderCartModal = () => {
+            const cart = getCart();
+            cartModalItemsContainer.innerHTML = ''; // Clear existing items
 
-        // Búsqueda de fotos por ID de álbum
-        searchButton.addEventListener('click', async () => {
-            const albumId = albumIdInput.value.trim();
-            if (!albumId) {
-                showMessage('Por favor, ingresa un ID de álbum.', 'error');
+            if (cart.length === 0) {
+                cartModalEmptyMessage.classList.remove('hidden');
+                cartModalItemsContainer.appendChild(cartModalEmptyMessage);
+            } else {
+                cartModalEmptyMessage.classList.add('hidden');
+                cart.forEach(item => {
+                    const cartItemDiv = document.createElement('div');
+                    cartItemDiv.className = 'cart-item-modal'; // Use specific class for modal cart items
+                    cartItemDiv.innerHTML = `
+                        <div class="flex items-center">
+                            <img src="${item.watermarkedUrl}" alt="Miniatura Foto" class="relative">
+                            <div class="cart-item-modal-info">
+                                <h4>Código: ${item.studentCode || 'N/A'}</h4>
+                                <p>Precio: $${item.price.toFixed(2)} ARS</p>
+                                <p>Cantidad: ${item.quantity}</p>
+                            </div>
+                        </div>
+                        <div class="cart-item-modal-actions">
+                            <button class="text-red-500 hover:text-red-700 font-medium" data-photo-id="${item.photoId}">Eliminar</button>
+                        </div>
+                    `;
+                    cartModalItemsContainer.appendChild(cartItemDiv);
+                });
+            }
+            updateCartUI(); // Update totals and button state
+        };
+
+        const showCartModal = () => {
+            renderCartModal(); // Render cart content before showing
+            cartModal.classList.remove('hidden');
+        };
+
+        const hideCartModal = () => {
+            cartModal.classList.add('hidden');
+        };
+
+
+        // --- Gallery and Photo Detail Logic ---
+        const fetchAlbumsForSelector = async () => {
+            albumSelector.innerHTML = '<option value="">Cargando álbumes...</option>';
+            albumSelector.disabled = true;
+            try {
+                const response = await fetch(`${BACKEND_URL}/albums`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    albumSelector.innerHTML = '<option value="">-- Elegí un colegio / álbum --</option>';
+                    if (data.albums && data.albums.length > 0) {
+                        data.albums.forEach(album => {
+                            const option = document.createElement('option');
+                            option.value = album.id;
+                            option.textContent = album.name;
+                            albumSelector.appendChild(option);
+                        });
+                        renderRecentAlbums(data.albums); // Render recent albums after fetching
+                    } else {
+                        albumSelector.innerHTML += '<option value="">No hay álbumes disponibles</option>';
+                        noRecentAlbumsMessage.classList.remove('hidden'); // Show message if no albums
+                    }
+                } else {
+                    showMessage(`Error al cargar álbumes: ${data.message || 'Error desconocido'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error de red al cargar álbumes para selector:', error);
+                showMessage(`Error de conexión al cargar álbumes: ${error.message}`, 'error');
+            } finally {
+                albumSelector.disabled = false;
+            }
+        };
+
+        const renderRecentAlbums = (albums) => {
+            recentAlbumsContainer.innerHTML = ''; // Clear previous content
+            noRecentAlbumsMessage.classList.add('hidden'); // Hide no albums message by default
+
+            if (!albums || albums.length === 0) {
+                noRecentAlbumsMessage.classList.remove('hidden');
                 return;
             }
-            if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(albumId)) {
-                showMessage('El ID del álbum no tiene un formato UUID válido.', 'error');
+
+            // Take a subset of albums for "recent" or "featured"
+            const albumsToShow = albums.slice(0, 3); // Show first 3 as example
+
+            albumsToShow.forEach(album => {
+                const albumCard = document.createElement('div');
+                albumCard.className = 'bg-white rounded-xl shadow-lg p-4 text-center border border-gray-200';
+                albumCard.innerHTML = `
+                    <h3 class="text-lg font-semibold mb-2">${album.name}</h3>
+                    <button class="btn-secondary text-sm" data-album-id="${album.id}">Ver Galería</button>
+                `;
+                recentAlbumsContainer.appendChild(albumCard);
+            });
+        };
+
+
+        const renderPhotos = (photos, albumName = 'Álbum Seleccionado') => {
+            galleryContainer.innerHTML = '';
+            noPhotosMessage.classList.add('hidden'); // Hide no photos message by default
+            galleryTitle.textContent = `Fotos del Álbum: ${albumName}`;
+
+            if (photos.length === 0) {
+                noPhotosMessage.classList.remove('hidden');
+                return;
+            }
+
+            photos.forEach(photo => {
+                const photoItem = document.createElement('div');
+                photoItem.className = 'photo-item relative group';
+                photoItem.innerHTML = `
+                    <img src="${photo.public_watermarked_url}" alt="Foto de evento" class="w-full h-48 object-cover rounded-md transition-transform duration-300 group-hover:scale-105">
+                    <div class="watermark-overlay rounded-md"></div>
+                    <div class="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md">
+                        <button class="btn-primary text-sm px-4 py-2" data-photo-id="${photo.id}">Ver / Comprar</button>
+                    </div>
+                    <div class="p-2 text-left">
+                        <p class="text-sm font-semibold">Código: ${photo.student_code || 'N/A'}</p>
+                        <p class="text-xs text-gray-600">Precio: $${photo.price.toFixed(2)} ARS</p>
+                    </div>
+                `;
+                photoItem.querySelector('button').addEventListener('click', () => {
+                    showPhotoDetailModal(photo);
+                });
+                galleryContainer.appendChild(photoItem);
+            });
+            showMessage(`Se encontraron ${photos.length} fotos.`, 'success');
+        };
+
+        const showPhotoDetailModal = (photo) => {
+            modalPhotoImg.src = photo.public_watermarked_url;
+            modalPhotoTitle.textContent = `Foto Código: ${photo.student_code || 'N/A'}`;
+            // These would ideally come from the backend with album details
+            modalPhotoEvent.textContent = `Evento del Álbum`; 
+            modalPhotoSchool.textContent = `Nombre del Colegio`;
+            modalPhotoPrice.textContent = `Precio: $${photo.price.toFixed(2)} ARS`;
+            
+            modalAddToCartBtn.onclick = () => {
+                addToCart(photo);
+                hidePhotoDetailModal();
+            };
+
+            modalBuyNowBtn.onclick = async () => {
+                hidePhotoDetailModal();
+                
+                const singleItemCart = [{
+                    photoId: photo.id,
+                    albumId: photo.album_id,
+                    watermarkedUrl: photo.public_watermarked_url,
+                    price: photo.price,
+                    studentCode: photo.student_code,
+                    quantity: 1
+                }];
+
+                const customerEmail = prompt("Por favor, ingresa tu email para la confirmación de compra:");
+                if (!customerEmail || !customerEmail.includes('@')) {
+                    showMessage('Necesitamos un email válido para procesar tu compra.', 'error');
+                    return;
+                }
+
+                setLoading(true);
+                showMessage('Procesando tu compra directa...', 'info');
+
+                try {
+                    const response = await fetch(`${BACKEND_URL}/create-payment-preference`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cart: singleItemCart, customerEmail: customerEmail })
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        showMessage('Pedido creado. Redirigiendo a Mercado Pago...', 'success');
+                        saveCart([]);
+                        updateCartUI();
+                        window.location.href = data.init_point;
+                    } else {
+                        showMessage(`Error al procesar compra directa: ${data.message || 'Error desconocido'}`, 'error');
+                        console.error('Detalles del error:', data);
+                    }
+                } catch (error) {
+                    console.error('Error de red o del servidor al crear preferencia (compra directa):', error);
+                    showMessage(`Error de conexión: ${error.message}. Asegúrate de que el backend esté funcionando.`, 'error');
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            photoDetailModal.classList.remove('hidden');
+        };
+
+        const hidePhotoDetailModal = () => {
+            photoDetailModal.classList.add('hidden');
+        };
+
+        // --- Event Handlers ---
+        albumSelector.addEventListener('change', () => {
+            if (albumSelector.value) {
+                searchButton.click(); // Trigger search if an album is selected from dropdown
+            }
+        });
+
+        searchButton.addEventListener('click', async () => {
+            const albumId = albumSelector.value.trim(); // Get albumId directly from selector
+            if (!albumId) {
+                showMessage('Por favor, selecciona un álbum.', 'error'); // Updated message
                 return;
             }
 
             setLoading(true);
             hideMessage();
             galleryContainer.innerHTML = '';
-            currentAlbumPhotos = []; // Limpia las fotos del álbum anterior
+            currentAlbumPhotos = [];
+            contentAfterSearch.classList.add('hidden'); // Hide content while loading
 
             try {
-                const response = await fetch(`http://localhost:3000/albums/${albumId}/photos`);
+                const response = await fetch(`${BACKEND_URL}/albums/${albumId}/photos`);
                 const data = await response.json();
 
                 if (response.ok) {
-                    currentAlbumPhotos = data.photos; // Guarda las fotos para el carrito
-                    renderPhotos(data.photos);
-                    galleryTitle.textContent = `Fotos de: Álbum ${albumId.substring(0, 8)}...`; // Título dinámico
-                    showSection('gallery-section'); // Muestra la sección de la galería
+                    currentAlbumPhotos = data.photos;
+                    const selectedAlbumOption = Array.from(albumSelector.options).find(opt => opt.value === albumId);
+                    const albumName = selectedAlbumOption ? selectedAlbumOption.textContent : `Álbum ${albumId.substring(0, 8)}...`;
+                    renderPhotos(data.photos, albumName);
+                    contentAfterSearch.classList.remove('hidden'); // Show content after successful search
                 } else {
                     showMessage(`Error al cargar fotos: ${data.message || 'Error desconocido'}`, 'error');
                     console.error('Detalles del error:', data);
@@ -534,42 +698,36 @@
             }
         });
 
-        // Simular búsqueda para "Colegios Destacados"
-        const simulateSearch = (albumId) => {
-            albumIdInput.value = albumId; // Pone el ID en el input
-            searchButton.click(); // Simula el clic en el botón de búsqueda
-        };
-
-        // Delegación de eventos para botones "Agregar al Carrito" en la galería
-        galleryContainer.addEventListener('click', (event) => {
-            if (event.target.classList.contains('add-to-cart-btn')) {
-                const photoId = event.target.dataset.photoId;
-                const photoToAdd = currentAlbumPhotos.find(p => p.id === photoId);
-                if (photoToAdd) {
-                    addToCart(photoToAdd);
-                } else {
-                    showMessage('Error: Información de la foto no encontrada para agregar al carrito.', 'error');
-                }
+        // Event listener for "Ver Galería" buttons in Recent Albums
+        recentAlbumsContainer.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON' && event.target.dataset.albumId) {
+                albumSelector.value = event.target.dataset.albumId; // Set dropdown value
+                searchButton.click(); // Trigger search
             }
         });
 
-        // Delegación de eventos para botones "Eliminar" del carrito
-        cartItemsContainer.addEventListener('click', (event) => {
-            if (event.target.dataset.photoId) { // Usamos data-photo-id para identificar el botón de eliminar
+        // Event listener for cartLink to open the cart modal
+        cartLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showCartModal();
+        });
+
+        // Event listener for remove buttons in the cart modal (delegation)
+        cartModalItemsContainer.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON' && event.target.dataset.photoId) {
                 const photoId = event.target.dataset.photoId;
                 removeFromCart(photoId);
             }
         });
 
-        // Event listener para el botón de Checkout
-        checkoutButton.addEventListener('click', async () => {
+        // Event listener for checkout button inside cart modal
+        cartModalCheckoutBtn.addEventListener('click', async () => {
             const cart = getCart();
             if (cart.length === 0) {
                 showMessage('Tu carrito está vacío. Agrega algunas fotos antes de finalizar la compra.', 'error');
                 return;
             }
 
-            // Usamos un prompt para el email por simplicidad en este ejemplo
             const customerEmail = prompt("Por favor, ingresa tu email para la confirmación de compra:");
             if (!customerEmail || !customerEmail.includes('@')) {
                 showMessage('Necesitamos un email válido para procesar tu compra.', 'error');
@@ -580,11 +738,9 @@
             showMessage('Procesando tu pedido...', 'info');
 
             try {
-                const response = await fetch('http://localhost:3000/create-payment-preference', {
+                const response = await fetch(`${BACKEND_URL}/create-payment-preference`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ cart: cart, customerEmail: customerEmail })
                 });
 
@@ -592,11 +748,8 @@
 
                 if (response.ok) {
                     showMessage('Pedido creado. Redirigiendo a Mercado Pago...', 'success');
-                    saveCart([]); // Limpia el carrito local
-                    currentAlbumPhotos = []; // Limpia las fotos del álbum actual
-                    updateCartUI(); // Actualiza el UI del carrito (debería mostrarse vacío)
-
-                    // Redirige al cliente a la URL de pago de Mercado Pago
+                    saveCart([]);
+                    updateCartUI();
                     window.location.href = data.init_point;
                 } else {
                     showMessage(`Error al crear pedido: ${data.message || 'Error desconocido'}`, 'error');
@@ -610,10 +763,10 @@
             }
         });
 
-        // --- Inicialización al cargar la página ---
+        // --- Initial Load ---
         document.addEventListener('DOMContentLoaded', () => {
-            updateCartUI(); // Actualiza el contador del carrito al cargar
-            showSection('home-section'); // Muestra la sección de inicio por defecto
+            fetchAlbumsForSelector(); // Load albums for the dropdown
+            updateCartUI(); // Update cart count on load
         });
     </script>
 </body>

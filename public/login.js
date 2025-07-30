@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Redirigir al usuario a la página de subida de fotos (index.html)
                 // Usamos un pequeño retraso para que el usuario vea el mensaje de éxito
                 setTimeout(() => {
-                    window.location.href = 'index.html'; // Redirige a la página principal del fotógrafo
+                    window.location.href = 'updload.html'; // Redirige a la página principal del fotógrafo
                 }, 1500);
 
             } else {

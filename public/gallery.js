@@ -1,180 +1,147 @@
-// public/gallery.js
 document.addEventListener('DOMContentLoaded', () => {
     const albumIdInput = document.getElementById('albumId');
     const searchButton = document.getElementById('searchButton');
     const galleryContainer = document.getElementById('galleryContainer');
     const messageDiv = document.getElementById('message');
     const loadingDiv = document.getElementById('loading');
-    const checkoutButton = document.getElementById('checkoutButton'); // Obtenemos la referencia al botón de checkout
+    const albumSelector = document.getElementById('albumSelector');
+    const recentContainer = document.getElementById('recentAlbumsContainer');
 
     const showMessage = (msg, type) => {
         messageDiv.textContent = msg;
-        messageDiv.className = '';
-        if (type) {
-            messageDiv.classList.add(type);
-        }
+        messageDiv.className = 'text-sm font-medium';
+        if (type === 'success') messageDiv.classList.add('text-green-600');
+        else if (type === 'error') messageDiv.classList.add('text-red-600');
+        else if (type === 'info') messageDiv.classList.add('text-blue-600');
     };
 
     const setLoading = (isLoading) => {
         loadingDiv.style.display = isLoading ? 'block' : 'none';
         searchButton.disabled = isLoading;
         albumIdInput.disabled = isLoading;
-        checkoutButton.disabled = isLoading; // Deshabilita también el botón de checkout
+        albumSelector.disabled = isLoading;
     };
 
-    // Función para actualizar la visualización del carrito
     const updateCartUI = () => {
         const cart = JSON.parse(localStorage.getItem('cart')) || [];
         const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-        const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        
+        const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
         if (cartCount > 0) {
-            showMessage(`Fotos en carrito: ${cartCount}. Total: $${cartTotal.toFixed(2)}.`, 'success');
+            showMessage(`Fotos en carrito: ${cartCount}. Total: $${cartTotal.toFixed(2)}`, 'success');
         } else {
             showMessage('El carrito está vacío.', 'info');
         }
-        console.log('Estado actual del carrito:', cart);
     };
 
-    // Lógica principal de búsqueda de fotos
     searchButton.addEventListener('click', async () => {
         const albumId = albumIdInput.value.trim();
 
-        if (!albumId) {
-            showMessage('Por favor, ingresa un ID de álbum.', 'error');
-            return;
-        }
-        if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(albumId)) {
-            showMessage('El ID del álbum no tiene un formato UUID válido.', 'error');
+        if (!albumId || !/^[0-9a-fA-F-]{36}$/.test(albumId)) {
+            showMessage('ID de álbum inválido.', 'error');
             return;
         }
 
         setLoading(true);
-        showMessage('', '');
-        galleryContainer.innerHTML = ''; // Limpia fotos anteriores
-        localStorage.removeItem('currentAlbumPhotos'); // Limpia fotos de álbum previas
+        galleryContainer.innerHTML = '';
+        localStorage.removeItem('currentAlbumPhotos');
 
         try {
-            const response = await fetch(`http://localhost:3000/albums/${albumId}/photos`);
-            const data = await response.json();
+            const res = await fetch(`http://localhost:3000/albums/${albumId}/photos`);
+            const data = await res.json();
 
-            if (response.ok) {
-                if (data.photos && data.photos.length > 0) {
-                    // Guarda las fotos obtenidas en localStorage PRIMERO
-                    localStorage.setItem('currentAlbumPhotos', JSON.stringify(data.photos)); 
-
-                    data.photos.forEach(photo => {
-                        const photoItem = document.createElement('div');
-                        photoItem.className = 'photo-item';
-                        photoItem.innerHTML = `
-                            <img src="${photo.public_watermarked_url}" alt="Foto de evento">
-                            <div class="photo-info">
-                                <p>Código: ${photo.student_code || 'N/A'}</p>
-                                <p class="price">Precio: $${photo.price.toFixed(2)}</p>
-                                <button data-photo-id="${photo.id}" class="add-to-cart-btn">Agregar al Carrito</button>
-                            </div>
-                        `;
-                        galleryContainer.appendChild(photoItem);
-                    });
-                    showMessage(`Se encontraron ${data.photos.length} fotos.`, 'success');
-                } else {
-                    showMessage('No se encontraron fotos para este álbum.', 'error');
-                }
+            if (res.ok && data.photos?.length > 0) {
+                localStorage.setItem('currentAlbumPhotos', JSON.stringify(data.photos));
+                data.photos.forEach(photo => {
+                    const div = document.createElement('div');
+                    div.className = 'photo-item bg-white p-4 rounded shadow';
+                    div.innerHTML = `
+                        <img src="${photo.public_watermarked_url}" alt="Foto" class="mb-2 rounded" />
+                        <p><strong>Código:</strong> ${photo.student_code || 'N/A'}</p>
+                        <p><strong>Precio:</strong> $${photo.price.toFixed(2)}</p>
+                        <button data-photo-id="${photo.id}" class="add-to-cart-btn mt-2 bg-indigo-500 text-white px-2 py-1 rounded">Agregar al Carrito</button>
+                    `;
+                    galleryContainer.appendChild(div);
+                });
+                showMessage(`Se encontraron ${data.photos.length} fotos.`, 'success');
             } else {
-                showMessage(`Error al cargar fotos: ${data.message || 'Error desconocido'}`, 'error');
-                console.error('Detalles del error:', data);
+                showMessage('No se encontraron fotos para este álbum.', 'error');
             }
-        } catch (error) {
-            console.error('Error de red o del servidor:', error);
-            showMessage(`Error de conexión: ${error.message}. Asegúrate de que el backend esté funcionando.`, 'error');
+        } catch (err) {
+            showMessage('Error de conexión.', 'error');
+            console.error(err);
         } finally {
             setLoading(false);
-            updateCartUI(); // Actualiza el UI del carrito después de la búsqueda
+            updateCartUI();
         }
     });
 
-    // Lógica para el botón "Agregar al Carrito"
-    galleryContainer.addEventListener('click', (event) => {
-        if (event.target.classList.contains('add-to-cart-btn')) {
-            const photoId = event.target.dataset.photoId;
-            const currentPhotosInGallery = JSON.parse(localStorage.getItem('currentAlbumPhotos')) || []; // Asegúrate de leerlo
-            const photoToAdd = currentPhotosInGallery.find(p => p.id === photoId);
+    galleryContainer.addEventListener('click', (e) => {
+        if (e.target.classList.contains('add-to-cart-btn')) {
+            const photoId = e.target.dataset.photoId;
+            const albumPhotos = JSON.parse(localStorage.getItem('currentAlbumPhotos')) || [];
+            const photo = albumPhotos.find(p => p.id === photoId);
+            if (!photo) return;
 
-            if (photoToAdd) {
-                let cart = JSON.parse(localStorage.getItem('cart')) || [];
-                const existingItem = cart.find(item => item.photoId === photoId);
-
-                if (existingItem) {
-                    existingItem.quantity += 1;
-                    showMessage('Cantidad actualizada en el carrito.', 'success');
-                } else {
-                    cart.push({
-                        photoId: photoToAdd.id,
-                        albumId: photoToAdd.album_id,
-                        watermarkedUrl: photoToAdd.public_watermarked_url,
-                        price: photoToAdd.price,
-                        studentCode: photoToAdd.student_code,
-                        quantity: 1
-                    });
-                    showMessage('Foto agregada al carrito.', 'success');
-                }
-                localStorage.setItem('cart', JSON.stringify(cart));
-                updateCartUI(); 
+            let cart = JSON.parse(localStorage.getItem('cart')) || [];
+            const exists = cart.find(i => i.photoId === photoId);
+            if (exists) {
+                exists.quantity++;
             } else {
-                showMessage('Error: Información de la foto no encontrada para agregar al carrito. Intenta buscar el álbum de nuevo.', 'error');
+                cart.push({
+                    photoId: photo.id,
+                    albumId: photo.album_id,
+                    watermarkedUrl: photo.public_watermarked_url,
+                    price: photo.price,
+                    studentCode: photo.student_code,
+                    quantity: 1
+                });
             }
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartUI();
         }
     });
 
-        // Event listener para el botón de Checkout
-        checkoutButton.addEventListener('click', async () => { // <--- ¡AÑADE 'async' AQUÍ!
-            const cart = JSON.parse(localStorage.getItem('cart')) || [];
-            if (cart.length === 0) {
-                showMessage('Tu carrito está vacío. Agrega algunas fotos antes de finalizar la compra.', 'error');
-                return;
-            }
+    // 🔄 Inicializar álbumes recientes y selector
+    (async () => {
+        try {
+            const res = await fetch('http://localhost:3000/albums');
+            const data = await res.json();
 
-            // Solicitar el email del cliente (o algún identificador) - Esto es CRUCIAL para Mercado Pago y tu BD
-            const customerEmail = prompt("Por favor, ingresa tu email para la confirmación de compra:");
-            if (!customerEmail || !customerEmail.includes('@')) {
-                showMessage('Necesitamos un email válido para procesar tu compra.', 'error');
-                return;
-            }
-            
-            setLoading(true); // Muestra spinner de carga
-            showMessage('Procesando tu pedido...', 'info');
+            if (res.ok && data.albums) {
+                const albums = data.albums;
+                const last3 = albums.slice(-3).reverse();
 
-            try {
-                const response = await fetch('http://localhost:3000/create-payment-preference', { // <--- ¡LLAMADA AL BACKEND!
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ cart: cart, customerEmail: customerEmail })
+                // llenar <select>
+                albums.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a.id;
+                    opt.textContent = a.name;
+                    albumSelector.appendChild(opt);
                 });
 
-                const data = await response.json();
+                // tarjetas últimas
+                last3.forEach(a => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded p-4 shadow text-center';
+                    card.innerHTML = `
+                        <div class="mb-2 text-lg font-semibold">${a.name}</div>
+                        <button class="bg-indigo-600 text-white px-3 py-1 rounded" onclick="document.getElementById('albumId').value='${a.id}'; document.getElementById('searchButton').click();">Ver Galería</button>
+                    `;
+                    recentContainer.appendChild(card);
+                });
 
-                if (response.ok) {
-                    showMessage('Pedido creado. Redirigiendo a Mercado Pago...', 'success');
-                    localStorage.removeItem('cart'); // Limpia el carrito local
-                    localStorage.removeItem('currentAlbumPhotos'); // Limpia las fotos del álbum actual
-
-                    // Redirige al cliente a la URL de pago de Mercado Pago
-                    window.location.href = data.init_point; // <-- ¡REDIRECCIÓN A MERCADO PAGO!
-                } else {
-                    showMessage(`Error al crear pedido: ${data.message || 'Error desconocido'}`, 'error');
-                    console.error('Detalles del error:', data);
-                }
-            } catch (error) {
-                console.error('Error de red o del servidor al crear preferencia:', error);
-                showMessage(`Error de conexión: ${error.message}. Asegúrate de que el backend esté funcionando.`, 'error');
-            } finally {
-                setLoading(false);
-                updateCartUI(); // Actualiza el UI del carrito (debería mostrarse vacío)
+                albumSelector.addEventListener('change', (e) => {
+                    if (e.target.value) {
+                        albumIdInput.value = e.target.value;
+                        searchButton.click();
+                    }
+                });
             }
-        });
+        } catch (err) {
+            console.error('Error cargando álbumes:', err);
+        }
+    })();
 
-    // Al cargar la página, inicializa el estado del carrito
     updateCartUI();
 });

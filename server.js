@@ -10,6 +10,7 @@ const sharp = require('sharp'); // Para el procesamiento de imágenes
 const path = require('path');   // Para manejar rutas de archivos
 const fs = require('fs');       // Para verificar si la marca de agua existe (opcional, pero buena práctica)
 const mercadopago = require('mercadopago'); // Importa el módulo completo de mercadopago
+const cors = require('cors'); // Importa el módulo CORS
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,38 +46,38 @@ const payment = new mercadopago.Payment(client);
 
 // Función con reintentos para obtener Merchant Order (para webhooks)
 async function getMerchantOrderWithRetry(merchantOrderId, retries = 5) {
-    for (let i = 0; i < retries; i++) {
-        try {
-            const response = await fetch(`https://api.mercadolibre.com/merchant_orders/${merchantOrderId}`, {
-                headers: {
-                    Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
-                },
-            });
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(`https://api.mercadolibre.com/merchant_orders/${merchantOrderId}`, {
+                headers: {
+                    Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+                },
+            });
 
-            const orderData = await response.json();
+            const orderData = await response.json();
 
-            // Si la orden tiene pagos, la devolvemos
-            if (orderData && orderData.payments && orderData.payments.length > 0) {
-                return orderData;
-            }
+            // Si la orden tiene pagos, la devolvemos
+            if (orderData && orderData.payments && orderData.payments.length > 0) {
+                return orderData;
+            }
 
-            // Si no tiene pagos y no es el último intento, esperamos y reintentamos
-            if (i < retries - 1) {
-                console.log(`Intento ${i + 1} sin pagos. Esperando 3s...`);
-                await new Promise((res) => setTimeout(res, 3000));
-            } else {
-                // Último intento, devolvemos lo que tengamos
-                return orderData;
-            }
-        } catch (err) {
-            console.error(`Error en getMerchantOrderWithRetry (Intento ${i + 1}):`, err);
-            if (i < retries - 1) {
-                await new Promise((res) => setTimeout(res, 3000));
-            } else {
-                throw err; // Si es el último intento y sigue fallando, lanzamos el error
-            }
-        }
-    }
+            // Si no tiene pagos y no es el último intento, esperamos y reintentamos
+            if (i < retries - 1) {
+                console.log(`Intento ${i + 1} sin pagos. Esperando 3s...`);
+                await new Promise((res) => setTimeout(res, 3000));
+            } else {
+                // Último intento, devolvemos lo que tengamos
+                return orderData;
+            }
+        } catch (err) {
+            console.error(`Error en getMerchantOrderWithRetry (Intento ${i + 1}):`, err);
+            if (i < retries - 1) {
+                await new Promise((res) => setTimeout(res, 3000));
+            } else {
+                throw err; // Si es el último intento y sigue fallando, lanzamos el error
+            }
+        }
+    }
 }
 
 // Función con reintentos para obtener Payment (aunque ahora usamos Merchant Order)
@@ -88,7 +89,7 @@ async function tryGetPaymentWithRetry(paymentId, retries = 3) {
       return result;
     } catch (err) {
       if (err.status === 404 && i < retries - 1) {
-        console.log(`Intento ${i + 1} falló. Reintentando en 3s...`);
+        console.log(`Intento ${i + 1} falló al obtener Payment. Reintentando en 3s...`);
         await new Promise(res => setTimeout(res, 3000));
       } else {
         throw err;
@@ -101,6 +102,7 @@ async function tryGetPaymentWithRetry(paymentId, retries = 3) {
 // --- Middlewares ---
 app.use(express.json()); // Para parsear cuerpos de petición JSON
 app.use(express.urlencoded({ extended: true })); // Para parsear datos de formularios URL-encoded
+app.use(cors()); // Habilita CORS para todas las rutas
 
 // Sirve los archivos estáticos desde la carpeta 'public'
 app.use(express.static('public'));
@@ -129,7 +131,8 @@ app.get('/', (req, res) => {
 // Ruta de prueba para verificar la conexión a Supabase
 app.get('/test-supabase', async (req, res) => {
     try {
-        const { data, error } = await supabase.from('albums').select('*').limit(1);
+        // Usamos supabaseAdmin para asegurarnos de que la conexión de servicio funciona
+        const { data, error } = await supabaseAdmin.from('albums').select('*').limit(1);
 
         if (error) {
             console.error('Error al probar Supabase:', error);
@@ -142,7 +145,67 @@ app.get('/test-supabase', async (req, res) => {
     }
 });
 
-// Ruta para obtener fotos de un álbum específico
+// --- NUEVAS RUTAS: Gestión de Álbumes ---
+
+// Ruta para obtener todos los álbumes (para el dropdown en el admin)
+app.get('/albums', async (req, res) => {
+    try {
+        // En un sistema real, aquí verificarías la autenticación del fotógrafo
+        // const { data: user } = await supabase.auth.getUser();
+        // if (!user) return res.status(401).json({ message: 'No autorizado.' });
+
+        // Usamos supabaseAdmin para obtener todos los álbumes sin restricciones RLS
+        const { data: albums, error } = await supabaseAdmin.from('albums').select('id, name');
+
+        if (error) {
+            console.error('Error al obtener álbumes:', error.message);
+            return res.status(500).json({ message: `Error al obtener álbumes: ${error.message}` });
+        }
+        res.status(200).json({ message: 'Álbumes obtenidos exitosamente.', albums });
+    } catch (err) {
+        console.error('Error inesperado al obtener álbumes:', err);
+        res.status(500).json({ message: 'Error interno del servidor al obtener álbumes.' });
+    }
+});
+
+// Ruta para crear un nuevo álbum
+app.post('/albums', async (req, res) => {
+    const { name, event_date } = req.body; // Asegúrate de recibir event_date del frontend
+    // En un sistema real, el photographer_user_id vendría de la sesión del usuario logueado
+    const photographer_user_id = '65805569-2e32-46a0-97c5-c52e31e02866'; // <-- ¡IMPORTANTE! Usar el ID real del fotógrafo logueado
+
+    if (!name) {
+        return res.status(400).json({ message: 'El nombre del álbum es requerido.' });
+    }
+    // Validar event_date si es requerido por la BD
+    if (!event_date) {
+        return res.status(400).json({ message: 'La fecha del evento es requerida para el álbum.' });
+    }
+
+    // *** LOG PARA DEPURACIÓN: Muestra los datos que se intentan insertar ***
+    console.log('Intentando crear álbum con datos:', { name, event_date, photographer_user_id });
+    // *** FIN LOG ***
+
+    try {
+        const { data: album, error } = await supabaseAdmin
+            .from('albums')
+            .insert({ name, event_date, photographer_user_id }) // Incluye event_date aquí
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error al crear álbum:', error.message);
+            return res.status(500).json({ message: `Error al crear álbum: ${error.message}` });
+        }
+        res.status(201).json({ message: 'Álbum creado exitosamente.', album });
+    } catch (err) {
+        console.error('Error inesperado al crear álbum:', err);
+        res.status(500).json({ message: 'Error interno del servidor al crear álbum.' });
+    }
+});
+
+
+// Ruta para obtener fotos de un álbum específico (para el cliente)
 app.get('/albums/:albumId/photos', async (req, res) => {
     const albumId = req.params.albumId;
 
@@ -286,8 +349,7 @@ app.post('/create-payment-preference', async (req, res) => {
                 failure: `${process.env.FRONTEND_URL}/success.html?orderId=${orderData.id}&customerEmail=${encodeURIComponent(customerEmail)}`, // Redirige a success también en caso de falla
                 pending: `${process.env.FRONTEND_URL}/success.html?orderId=${orderData.id}&customerEmail=${encodeURIComponent(customerEmail)}` // Redirige a success también en caso de pendiente
             },
-            notification_url: `${process.env.BACKEND_URL}/mercadopago-webhook`,
-            auto_return: 'approved' // 👈 ¡esto es clave!
+            notification_url: `${process.env.BACKEND_URL}/mercadopago-webhook`
         };
 
         const responseMP = await preference.create({ body: simplePreferenceData });
@@ -321,7 +383,9 @@ app.post('/upload-photos/:albumId', upload.array('photos'), async (req, res) => 
     }
 
     try {
-        const { data: album, error: albumError } = await supabase
+        // *** CAMBIO CLAVE AQUÍ: Usar supabaseAdmin para verificar el álbum ***
+        // Esto asegura que la verificación del álbum no esté sujeta a las políticas RLS
+        const { data: album, error: albumError } = await supabaseAdmin
             .from('albums')
             .select('id, photographer_user_id')
             .eq('id', albumId)
@@ -357,6 +421,7 @@ app.post('/upload-photos/:albumId', upload.array('photos'), async (req, res) => 
             const watermarkedFilePath = `albums/${albumId}/watermarked/${uniqueFileName}`;
 
             // --- Subida de Imagen Original (a bucket privado) ---
+            // Se usa supabaseAdmin porque es un bucket privado
             const { error: uploadOriginalError } = await supabaseAdmin.storage
                 .from('original-photos')
                 .upload(originalFilePath, file.buffer, {
@@ -365,7 +430,7 @@ app.post('/upload-photos/:albumId', upload.array('photos'), async (req, res) => 
                 });
 
             if (uploadOriginalError) {
-                console.error(`Error al subir la imagen con marca de agua "${file.originalname}":`, uploadOriginalError.message);
+                console.error(`Error al subir la imagen original "${file.originalname}":`, uploadOriginalError.message);
                 throw new Error(`Fallo al subir original: ${uploadOriginalError.message}`);
             }
 
@@ -379,6 +444,7 @@ app.post('/upload-photos/:albumId', upload.array('photos'), async (req, res) => 
                 .toBuffer();
 
             // --- Subida de Imagen con Marca de Agua (a bucket público) ---
+            // Se usa supabase (anon key) porque es un bucket público al que se sube desde el backend
             const { error: uploadWatermarkedError } = await supabase.storage
                 .from('watermarked-photos')
                 .upload(watermarkedFilePath, watermarkedBuffer, {
@@ -395,14 +461,15 @@ app.post('/upload-photos/:albumId', upload.array('photos'), async (req, res) => 
             const publicWatermarkedUrl = `${supabaseUrl}/storage/v1/object/public/watermarked-photos/${watermarkedFilePath}`;
 
             // --- Insertar metadatos en la base de datos `photos` ---
-            const { data: photoDbData, error: dbInsertError } = await supabase
+            // Se usa supabaseAdmin porque es una operación de escritura en la base de datos
+            const { data: photoDbData, error: dbInsertError } = await supabaseAdmin
                 .from('photos')
                 .insert([
                     {
                         album_id: albumId,
                         original_file_path: originalFilePath,
                         watermarked_file_path: watermarkedFilePath,
-                        student_code: null,
+                        student_code: null, // Asumo que esto se completará luego
                         price: 15.00,
                         metadata: {
                             originalName: file.originalname,
@@ -524,94 +591,96 @@ app.post('/mercadopago-webhook', async (req, res) => {
 // --- NUEVA RUTA: Obtener Detalles de Orden para Página de Éxito ---
 // Esta ruta es llamada por success.html para obtener las fotos compradas.
 app.get('/order-details/:orderId/:customerEmail', async (req, res) => {
-    const { orderId, customerEmail } = req.params;
+    const { orderId, customerEmail } = req.params;
 
-    if (!orderId || !customerEmail) {
-        return res.status(400).json({ message: 'ID de orden o email del cliente faltantes.' });
-    }
-    if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(orderId)) {
-        return res.status(400).json({ message: 'ID de orden no válido.' });
-    }
+    if (!orderId || !customerEmail) {
+        return res.status(400).json({ message: 'ID de orden o email del cliente faltantes.' });
+    }
+    if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(orderId)) {
+        return res.status(400).json({ message: 'ID de orden no válido.' });
+    }
 
-    try {
-        // 1. Verificar que la orden existe, está pagada y pertenece a este email
-        const { data: order, error: orderError } = await supabaseAdmin
-            .from('orders')
-            .select('id, customer_email, status')
-            .eq('id', orderId)
-            .eq('customer_email', customerEmail)
-            // No verificamos el status 'paid' aquí para que la página de éxito pueda mostrar
-            // estados pendientes o rechazados. success.html debe manejar esto.
-            .single();
+    try {
+        // 1. Verificar que la orden existe, está pagada y pertenece a este email
+        // Usamos supabaseAdmin para ignorar RLS en esta verificación de backend
+        const { data: order, error: orderError } = await supabaseAdmin
+            .from('orders')
+            .select('id, customer_email, status')
+            .eq('id', orderId)
+            .eq('customer_email', customerEmail)
+            // No verificamos el status 'paid' aquí para que la página de éxito pueda mostrar
+            // estados pendientes o rechazados. success.html debe manejar esto.
+            .single();
 
-        if (orderError || !order) {
-            console.error(`Error al obtener detalles de orden: Orden ${orderId} no encontrada o email incorrecto.`, orderError?.message);
-            // Devolvemos un 404/403 pero con un mensaje que success.html pueda interpretar
-            return res.status(404).json({ message: 'Orden no encontrada o email no coincide.', status: 'not_found' });
-        }
+        if (orderError || !order) {
+            console.error(`Error al obtener detalles de orden: Orden ${orderId} no encontrada o email incorrecto.`, orderError?.message);
+            // Devolvemos un 404/403 pero con un mensaje que success.html pueda interpretar
+            return res.status(404).json({ message: 'Orden no encontrada o email no coincide.', status: 'not_found' });
+        }
 
-        // Si la orden no está pagada, devolvemos el estado actual para que el frontend lo maneje
-        if (order.status !== 'paid') {
-            return res.status(200).json({
-                message: `La orden ${orderId} no está pagada aún. Estado actual: ${order.status}`,
-                order: {
-                    id: order.id,
-                    customer_email: order.customer_email,
-                    status: order.status
-                },
-                photos: [] // No enviamos fotos si no está pagada
-            });
-        }
+        // Si la orden no está pagada, devolvemos el estado actual para que el frontend lo maneje
+        if (order.status !== 'paid') {
+            return res.status(200).json({
+                message: `La orden ${orderId} no está pagada aún. Estado actual: ${order.status}`,
+                order: {
+                    id: order.id,
+                    customer_email: order.customer_email,
+                    status: order.status
+                },
+                photos: [] // No enviamos fotos si no está pagada
+            });
+        }
 
-        // 2. Obtener los ítems (fotos) asociados a esta orden
-        const { data: orderItems, error: orderItemsError } = await supabaseAdmin
-            .from('order_items')
-            .select('photo_id')
-            .eq('order_id', orderId);
+        // 2. Obtener los ítems (fotos) asociados a esta orden
+        // Usamos supabaseAdmin para ignorar RLS en esta verificación de backend
+        const { data: orderItems, error: orderItemsError } = await supabaseAdmin
+            .from('order_items')
+            .select('photo_id')
+            .eq('order_id', orderId);
 
-        if (orderItemsError) {
-            console.error(`Error al obtener ítems de la orden ${orderId}:`, orderItemsError.message);
-            return res.status(500).json({ message: 'Error al obtener ítems de la orden.' });
-        }
+        if (orderItemsError) {
+            console.error(`Error al obtener ítems de la orden ${orderId}:`, orderItemsError.message);
+            return res.status(500).json({ message: 'Error al obtener ítems de la orden.' });
+        }
 
-        if (!orderItems || orderItems.length === 0) {
-            return res.status(404).json({ message: 'No se encontraron fotos para esta orden.' });
-        }
+        if (!orderItems || orderItems.length === 0) {
+            return res.status(404).json({ message: 'No se encontraron fotos para esta orden.' });
+        }
 
-        // 3. Obtener los detalles de cada foto (especialmente la URL con marca de agua y student_code)
-        const photoIds = orderItems.map(item => item.photo_id);
-        const { data: photos, error: photosError } = await supabase
-            .from('photos')
-            .select('id, watermarked_file_path, student_code, price') // Seleccionamos lo que necesitamos para mostrar
-            .in('id', photoIds);
+        // 3. Obtener los detalles de cada foto (especialmente la URL con marca de agua y student_code)
+        // Usamos supabaseAdmin para ignorar RLS en esta verificación de backend
+        const { data: photos, error: photosError } = await supabaseAdmin
+            .from('photos')
+            .select('id, watermarked_file_path, student_code, price') // Seleccionamos lo que necesitamos para mostrar
+            .in('id', photoIds);
 
-        if (photosError) {
-            console.error(`Error al obtener detalles de las fotos para la orden ${orderId}:`, photosError.message);
-            return res.status(500).json({ message: 'Error al obtener detalles de las fotos.' });
-        }
+        if (photosError) {
+            console.error(`Error al obtener detalles de las fotos para la orden ${orderId}:`, photosError.message);
+            return res.status(500).json({ message: 'Error al obtener detalles de las fotos.' });
+        }
 
-        const photosWithPublicUrls = photos.map(photo => ({
-            id: photo.id,
-            student_code: photo.student_code,
-            price: photo.price,
-            // Construimos la URL pública de la foto con marca de agua
-            watermarked_url: `${supabaseUrl}/storage/v1/object/public/watermarked-photos/${photo.watermarked_file_path}`
-        }));
+        const photosWithPublicUrls = photos.map(photo => ({
+            id: photo.id,
+            student_code: photo.student_code,
+            price: photo.price,
+            // Construimos la URL pública de la foto con marca de agua
+            watermarked_url: `${supabaseUrl}/storage/v1/object/public/watermarked-photos/${photo.watermarked_file_path}`
+        }));
 
-        res.status(200).json({
-            message: `Detalles de la orden ${orderId} obtenidos exitosamente.`,
-            order: {
-                id: order.id,
-                customer_email: order.customer_email,
-                status: order.status
-            },
-            photos: photosWithPublicUrls
-        });
+        res.status(200).json({
+            message: `Detalles de la orden ${orderId} obtenidos exitosamente.`,
+            order: {
+                id: order.id,
+                customer_email: order.customer_email,
+                status: order.status
+            },
+            photos: photosWithPublicUrls
+        });
 
-    } catch (err) {
-        console.error('❌ Error inesperado en la ruta /order-details:', err);
-        res.status(500).json({ message: 'Error interno del servidor al obtener detalles de la orden.' });
-    }
+    } catch (err) {
+        console.error('❌ Error inesperado en la ruta /order-details:', err);
+        res.status(500).json({ message: 'Error interno del servidor al obtener detalles de la orden.' });
+    }
 });
 
 
@@ -633,6 +702,7 @@ app.get('/download-photo/:photoId/:orderId/:customerEmail', async (req, res) => 
 
     try {
         // 2. Verificar que la orden existe, está pagada y pertenece a este email
+        // Usamos supabaseAdmin para ignorar RLS en esta verificación de backend
         const { data: order, error: orderError } = await supabaseAdmin
             .from('orders')
             .select('id, customer_email, status')
@@ -647,6 +717,7 @@ app.get('/download-photo/:photoId/:orderId/:customerEmail', async (req, res) => 
         }
 
         // 3. Verificar que la foto es parte de esta orden
+        // Usamos supabaseAdmin para ignorar RLS en esta verificación de backend
         const { data: orderItem, error: orderItemError } = await supabaseAdmin
             .from('order_items')
             .select('id, photo_id')
@@ -660,6 +731,7 @@ app.get('/download-photo/:photoId/:orderId/:customerEmail', async (req, res) => 
         }
 
         // 4. Obtener la ruta del archivo original de la foto
+        // Usamos supabaseAdmin para ignorar RLS en esta verificación de backend
         const { data: photo, error: photoError } = await supabaseAdmin
             .from('photos')
             .select('original_file_path')
