@@ -373,142 +373,140 @@ app.post('/create-payment-preference', async (req, res) => {
     }
 });
 
-// Ruta para subir fotos a un álbum específico
 app.post('/upload-photos/:albumId', upload.array('photos'), async (req, res) => {
-    const albumId = req.params.albumId;
-    const photographerId = '65805569-2e32-46a0-97c5-c52e31e02866'; // <--- ¡IMPORTANTE! Reemplaza con el ID real de tu fotógrafo
+    const albumId = req.params.albumId;
+    const photographerId = '65805569-2e32-46a0-97c5-c52e31e02866'; // <-- tu ID fijo por ahora
 
-    if (!albumId || !/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(albumId)) {
-        return res.status(400).json({ message: 'ID de álbum no válido.' });
-    }
+    if (!albumId || !/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(albumId)) {
+        return res.status(400).json({ message: 'ID de álbum no válido.' });
+    }
 
-    try {
-        // *** CAMBIO CLAVE AQUÍ: Usar supabaseAdmin para verificar el álbum ***
-        // Esto asegura que la verificación del álbum no esté sujeta a las políticas RLS
-        const { data: album, error: albumError } = await supabaseAdmin
-            .from('albums')
-            .select('id, photographer_user_id')
-            .eq('id', albumId)
-            .eq('photographer_user_id', photographerId)
-            .single();
+    try {
+        const { data: album, error: albumError } = await supabaseAdmin
+            .from('albums')
+            .select('id, photographer_user_id')
+            .eq('id', albumId)
+            .eq('photographer_user_id', photographerId)
+            .single();
 
-        if (albumError || !album) {
-            console.error('Error al verificar álbum:', albumError ? albumError.message : 'Álbum no encontrado.');
-            return res.status(404).json({ message: 'Álbum no encontrado o no autorizado para este fotógrafo.' });
-        }
-    } catch (dbError) {
-        console.error('Error de base de datos al verificar álbum:', dbError);
-        return res.status(500).json({ message: 'Error interno del servidor al verificar el álbum.' });
-    }
+        if (albumError || !album) {
+            console.error('Error al verificar álbum:', albumError ? albumError.message : 'Álbum no encontrado.');
+            return res.status(404).json({ message: 'Álbum no encontrado o no autorizado para este fotógrafo.' });
+        }
+    } catch (dbError) {
+        console.error('Error de base de datos al verificar álbum:', dbError);
+        return res.status(500).json({ message: 'Error interno del servidor al verificar el álbum.' });
+    }
 
-    if (!req.files || req.files.length === 0) {
-        return res.status(400).json({ message: 'No se subieron archivos.' });
-    }
+    if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ message: 'No se subieron archivos.' });
+    }
 
-    const watermarkedPhotosPath = path.resolve(__dirname, 'assets', 'watermark.png');
-    console.log('Intentando cargar marca de agua desde:', watermarkedPhotosPath);
-    if (!fs.existsSync(watermarkedPhotosPath)) {
-        console.error(`Error: Archivo de marca de agua no encontrado en ${watermarkedPhotosPath}`);
-        return res.status(500).json({ message: 'Error interno: Archivo de marca de agua no encontrado.' });
-    }
+    const watermarkedPhotosPath = path.resolve(__dirname, 'assets', 'watermark.png');
+    console.log('Intentando cargar marca de agua desde:', watermarkedPhotosPath);
+    if (!fs.existsSync(watermarkedPhotosPath)) {
+        console.error(`Error: Archivo de marca de agua no encontrado en ${watermarkedPhotosPath}`);
+        return res.status(500).json({ message: 'Error interno: Archivo de marca de agua no encontrado.' });
+    }
 
-    const results = [];
+    const results = [];
 
-    for (const file of req.files) {
-        try {
-            const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}${path.extname(file.originalname)}`;
-            const originalFilePath = `albums/${albumId}/original/${uniqueFileName}`;
-            const watermarkedFilePath = `albums/${albumId}/watermarked/${uniqueFileName}`;
+    for (const file of req.files) {
+        try {
+            const uniqueFileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}${path.extname(file.originalname)}`;
+            const originalFilePath = `albums/${albumId}/original/${uniqueFileName}`;
+            const watermarkedFilePath = `albums/${albumId}/watermarked/${uniqueFileName}`;
 
-            // --- Subida de Imagen Original (a bucket privado) ---
-            // Se usa supabaseAdmin porque es un bucket privado
-            const { error: uploadOriginalError } = await supabaseAdmin.storage
-                .from('original-photos')
-                .upload(originalFilePath, file.buffer, {
-                    contentType: file.mimetype,
-                    upsert: false
-                });
+            // Subir imagen original
+            const { error: uploadOriginalError } = await supabaseAdmin.storage
+                .from('original-photos')
+                .upload(originalFilePath, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: false
+                });
 
-            if (uploadOriginalError) {
-                console.error(`Error al subir la imagen original "${file.originalname}":`, uploadOriginalError.message);
-                throw new Error(`Fallo al subir original: ${uploadOriginalError.message}`);
-            }
+            if (uploadOriginalError) {
+                console.error(`Error al subir la imagen original "${file.originalname}":`, uploadOriginalError.message);
+                throw new Error(`Fallo al subir original: ${uploadOriginalError.message}`);
+            }
 
-            // --- Aplicar Marca de Agua con Sharp ---
-            const watermarkedBuffer = await sharp(file.buffer)
-                .composite([{
-                    input: watermarkedPhotosPath,
-                    gravity: 'center',
-                }])
-                .toFormat('jpeg', { quality: 80 })
-                .toBuffer();
+            // Redimensionar la marca de agua si es necesario
+            const watermarkBuffer = await sharp(watermarkedPhotosPath)
+                .resize({ width: 200 }) // Ajustá el tamaño si querés
+                .toBuffer();
 
-            // --- Subida de Imagen con Marca de Agua (a bucket público) ---
-            // Se usa supabase (anon key) porque es un bucket público al que se sube desde el backend
-            const { error: uploadWatermarkedError } = await supabase.storage
-                .from('watermarked-photos')
-                .upload(watermarkedFilePath, watermarkedBuffer, {
-                    contentType: 'image/jpeg',
-                    upsert: false
-                });
+            // Aplicar marca de agua
+            const watermarkedBuffer = await sharp(file.buffer)
+                .composite([
+                    {
+                        input: watermarkBuffer,
+                        gravity: 'center',
+                    }
+                ])
+                .toFormat('jpeg', { quality: 80 })
+                .toBuffer();
 
-            if (uploadWatermarkedError) {
-                console.error(`Error al subir la imagen con marca de agua "${file.originalname}":`, uploadWatermarkedError.message);
-                throw new Error(`Fallo al subir marcada de agua: ${uploadWatermarkedError.message}`);
-            }
+            // Subir imagen con marca de agua
+            const { error: uploadWatermarkedError } = await supabase.storage
+                .from('watermarked-photos')
+                .upload(watermarkedFilePath, watermarkedBuffer, {
+                    contentType: 'image/jpeg',
+                    upsert: false
+                });
 
-            // --- Obtener URL pública para la imagen con marca de agua ---
-            const publicWatermarkedUrl = `${supabaseUrl}/storage/v1/object/public/watermarked-photos/${watermarkedFilePath}`;
+            if (uploadWatermarkedError) {
+                console.error(`Error al subir la imagen con marca de agua "${file.originalname}":`, uploadWatermarkedError.message);
+                throw new Error(`Fallo al subir marcada de agua: ${uploadWatermarkedError.message}`);
+            }
 
-            // --- Insertar metadatos en la base de datos `photos` ---
-            // Se usa supabaseAdmin porque es una operación de escritura en la base de datos
-            const { data: photoDbData, error: dbInsertError } = await supabaseAdmin
-                .from('photos')
-                .insert([
-                    {
-                        album_id: albumId,
-                        original_file_path: originalFilePath,
-                        watermarked_file_path: watermarkedFilePath,
-                        student_code: null, // Asumo que esto se completará luego
-                        price: 15.00,
-                        metadata: {
-                            originalName: file.originalname,
-                            mimetype: file.mimetype,
-                            size: file.size
-                        }
-                    }
-                ])
-                .select()
-                .single();
+            const publicWatermarkedUrl = `${supabaseUrl}/storage/v1/object/public/watermarked-photos/${watermarkedFilePath}`;
 
-            if (dbInsertError) {
-                console.error(`Error al insertar en la BD para "${file.originalname}":`, dbInsertError.message);
-                throw new Error(`Fallo al guardar en la BD: ${dbInsertError.message}`);
-            }
+            const { data: photoDbData, error: dbInsertError } = await supabaseAdmin
+                .from('photos')
+                .insert([{
+                    album_id: albumId,
+                    original_file_path: originalFilePath,
+                    watermarked_file_path: watermarkedFilePath,
+                    student_code: null,
+                    price: 15.00,
+                    metadata: {
+                        originalName: file.originalname,
+                        mimetype: file.mimetype,
+                        size: file.size
+                    }
+                }])
+                .select()
+                .single();
 
-            results.push({
-                originalName: file.originalname,
-                status: 'success',
-                photoId: photoDbData.id,
-                publicWatermarkedUrl: publicWatermarkedUrl
-            });
+            if (dbInsertError) {
+                console.error(`Error al insertar en la BD para "${file.originalname}":`, dbInsertError.message);
+                throw new Error(`Fallo al guardar en la BD: ${dbInsertError.message}`);
+            }
 
-        } catch (error) {
-            console.error(`Error procesando o subiendo "${file.originalname}":`, error.message);
-            results.push({
-                originalName: file.originalname,
-                status: 'failed',
-                error: error.message
-            });
-        }
-    }
+            results.push({
+                originalName: file.originalname,
+                status: 'success',
+                photoId: photoDbData.id,
+                publicWatermarkedUrl: publicWatermarkedUrl
+            });
 
-    res.status(200).json({
-        message: 'Proceso de subida de fotos completado.',
-        summary: results.length > 0 ? `${results.filter(r => r.status === 'success').length} fotos subidas con éxito, ${results.filter(r => r.status === 'failed').length} fallidas.` : 'No se procesaron fotos.',
-        results: results
-    });
+        } catch (error) {
+            console.error(`Error procesando o subiendo "${file.originalname}":`, error.message);
+            results.push({
+                originalName: file.originalname,
+                status: 'failed',
+                error: error.message
+            });
+        }
+    }
+
+    res.status(200).json({
+        message: 'Proceso de subida de fotos completado.',
+        summary: results.length > 0 ? `${results.filter(r => r.status === 'success').length} fotos subidas con éxito, ${results.filter(r => r.status === 'failed').length} fallidas.` : 'No se procesaron fotos.',
+        results: results
+    });
 });
+
 
 // --- NUEVA RUTA: Webhook de Mercado Pago ---
 app.post('/mercadopago-webhook', async (req, res) => {
