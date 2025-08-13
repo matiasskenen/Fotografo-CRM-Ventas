@@ -321,6 +321,7 @@ app.post('/create-payment-preference', async (req, res) => {
       notification_url: `${process.env.BACKEND_URL}/mercadopago-webhook`,
     };
 
+    console.log(prefBody)
     const prefRes = await preference.create({ body: prefBody });
     const initPoint = process.env.NODE_ENV === 'production' ? prefRes.init_point : prefRes.sandbox_init_point;
 
