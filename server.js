@@ -477,49 +477,68 @@ app.post('/upload-photos/:albumId', upload.array('photos'), async (req, res) => 
 // Si mantenés tu express.json() global, declaralo así con middleware específico:
 app.post("/mercadopago-webhook", express.json(), async (req, res) => {
   console.log("📩 Webhook recibido de Mercado Pago");
-  console.log("Headers:", req.headers);
-  console.log("Body:", JSON.stringify(req.body, null, 2));
 
   try {
-    const paymentId = req.body.data?.id || req.query.id;
-    console.log("🔍 ID de pago recibido:", paymentId);
+    const { topic, id, resource } = req.query; // Mercado Pago envía estos params
+    console.log("Query Params:", req.query);
+    console.log("Cuerpo del Webhook (JSON):", req.body);
 
-    if (!paymentId) {
-      console.log("❌ No se encontró ID de pago");
-      return res.sendStatus(400);
+    let paymentId = null;
+    let merchantOrderId = null;
+
+    // Caso 1: tipo "payment"
+    if (topic === "payment" || req.body.type === "payment") {
+      paymentId = id || req.body.data?.id || req.body.resource;
+      console.log("🔍 ID de pago recibido:", paymentId);
+
+      // Consultar datos del pago con el Access Token
+      const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`
+        }
+      });
+
+      const paymentData = await mpRes.json();
+      console.log("💳 Datos del pago:", paymentData);
+
+      if (paymentData.status === "approved") {
+        merchantOrderId = paymentData.order?.id || paymentData.order_id;
+      }
     }
 
-    // Consultar detalles del pago
-    const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-      headers: { Authorization: `Bearer ${process.env.MP_ACCESS_TOKEN}` }
-    });
-    const paymentData = await mpResponse.json();
-    console.log("💳 Datos del pago:", JSON.stringify(paymentData, null, 2));
+    // Caso 2: tipo "merchant_order"
+    if (topic === "merchant_order" || req.body.topic === "merchant_order") {
+      merchantOrderId = id || resource?.split("/").pop();
+      console.log("🔍 ID de merchant_order recibido:", merchantOrderId);
 
-    if (paymentData.status === "approved") {
-      const orderId = paymentData.external_reference;
-      console.log(`✅ Pago aprobado para orden ${orderId}`);
+      // Consultar datos de la orden con el Access Token
+      const orderRes = await fetch(`https://api.mercadopago.com/merchant_orders/${merchantOrderId}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`
+        }
+      });
 
-      // Actualizar estado de la orden en Supabase
-      const { data, error } = await supabase
-        .from("orders")
-        .update({ status: "paid" })
-        .eq("id", orderId);
+      const orderData = await orderRes.json();
+      console.log("📦 Datos de la orden:", orderData);
 
-      if (error) {
-        console.error("❌ Error actualizando orden en Supabase:", error);
-      } else {
-        console.log("📦 Orden actualizada:", data);
+      // Si está pagada, actualizamos en la base de datos
+      if (orderData.order_status === "paid" || orderData.paid_amount >= orderData.total_amount) {
+        console.log(`✅ Orden ${orderData.external_reference} pagada, habilitando descarga...`);
+
+        // Ejemplo de update en Supabase
+        await supabase
+          .from("orders")
+          .update({ status: "paid" })
+          .eq("id", orderData.external_reference);
       }
     }
 
     res.sendStatus(200);
-  } catch (err) {
-    console.error("💥 Error procesando webhook:", err);
+  } catch (error) {
+    console.error("❌ Error en webhook:", error);
     res.sendStatus(500);
   }
 });
-
 
 
 // --- NUEVA RUTA: Obtener Detalles de Orden para Página de Éxito ---
