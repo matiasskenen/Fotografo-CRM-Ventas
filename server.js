@@ -527,13 +527,19 @@ app.post("/mercadopago-webhook", express.json(), async (req, res) => {
         console.log(`✅ Orden ${orderData.external_reference} pagada, habilitando descarga...`);
 
         // Ejemplo de update en Supabase
-        await supabaseAdmin
+        const { data, error } = await supabaseAdmin
           .from("orders")
           .update({
             status: "paid",
-            mercado_pago_payment_id: orderData.payments[0]?.id || null
+            mercado_pago_payment_id: orderData.payments?.[0]?.id || null
           })
-          .eq("id", orderData.external_reference);
+          .eq("id", orderData.external_reference)
+          .select();
+
+        console.log("🔍 Intentando actualizar orden:", orderData.external_reference);
+        console.log("📦 Resultado UPDATE:", data);
+        if (error) console.error("❌ Error UPDATE:", error.message);
+        if (!data || data.length === 0) console.warn("⚠️ No se encontró ninguna orden para actualizar");
       }
     }
 
