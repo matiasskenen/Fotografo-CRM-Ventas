@@ -311,14 +311,15 @@ app.post('/create-payment-preference', async (req, res) => {
 
     // 3) Crear preferencia (suma total como 1 ítem)
     const prefBody = {
-      items: [{ title: 'Compra de Fotos Escolares', unit_price: Number(totalAmount), quantity: 1, currency_id: 'ARS' }],
-      external_reference: orderData.id, // <- lo usamos en el webhook
-      back_urls: {
-        success: `${process.env.FRONTEND_URL}/success.html?orderId=${orderData.id}&customerEmail=${encodeURIComponent(customerEmail)}`,
-        failure: `${process.env.FRONTEND_URL}/success.html?orderId=${orderData.id}&customerEmail=${encodeURIComponent(customerEmail)}`,
-        pending: `${process.env.FRONTEND_URL}/success.html?orderId=${orderData.id}&customerEmail=${encodeURIComponent(customerEmail)}`
-      },
-      notification_url: `${process.env.BACKEND_URL}/mercadopago-webhook`,
+        items: [{ title: "Compra de Fotos Escolares", unit_price: Number(totalAmount), quantity: 1, currency_id: "ARS" }],
+        external_reference: orderData.id, // <- lo usamos en el webhook
+        back_urls: {
+            success: `${process.env.FRONTEND_URL}/success.html?orderId=${orderData.id}&customerEmail=${encodeURIComponent(customerEmail)}`,
+            failure: `${process.env.FRONTEND_URL}/success.html?orderId=${orderData.id}&customerEmail=${encodeURIComponent(customerEmail)}`,
+            pending: `${process.env.FRONTEND_URL}/success.html?orderId=${orderData.id}&customerEmail=${encodeURIComponent(customerEmail)}`,
+        },
+        auto_return: "approved",
+        notification_url: `${process.env.BACKEND_URL}/mercadopago-webhook`,
     };
 
     console.log(prefBody)
