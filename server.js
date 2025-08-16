@@ -520,7 +520,7 @@ app.post("/mercadopago-webhook", express.json(), async (req, res) => {
                 // 4. Generar URLs firmadas
                 const signedUrls = [];
                 for (const photo of photos) {
-                    const { data: signedData, error: signedError } = await supabaseAdmin.storage.from("fotos-originales").createSignedUrl(photo.original_file_path, 604800);
+                    const { data: signedData, error: signedError } = await supabaseAdmin.storage.from("fotos-originales").createSignedUrl(photo.original_file_path, 60 * 60 * 24 * 7);
                     if (!signedError) signedUrls.push(signedData.signedUrl);
                 }
                 // 6. Actualizar estado a paid
@@ -528,6 +528,7 @@ app.post("/mercadopago-webhook", express.json(), async (req, res) => {
                     .from("orders")
                     .update({ status: "paid", mercado_pago_payment_id: orderData.payments?.[0]?.id || null })
                     .eq("id", orderId);
+                    
 
                 console.log(`✅ Orden ${orderId} actualizada a 'paid' y email enviado`);
             }
