@@ -523,33 +523,6 @@ app.post("/mercadopago-webhook", express.json(), async (req, res) => {
                     const { data: signedData, error: signedError } = await supabaseAdmin.storage.from("fotos-originales").createSignedUrl(photo.original_file_path, 604800);
                     if (!signedError) signedUrls.push(signedData.signedUrl);
                 }
-
-                // 5. Enviar email con EmailJS
-                const axios = require("axios"); // arriba en tus imports
-
-                // dentro del webhook, en lugar de fetch a EmailJS:
-                try {
-                    const emailRes = await axios.post("https://api.emailjs.com/api/v1.0/email/send", {
-                        service_id: process.env.EMAILJS_SERVICE_ID,
-                        template_id: process.env.EMAILJS_TEMPLATE_ID,
-                        user_id: process.env.EMAILJS_PUBLIC_KEY,
-                        accessToken: process.env.EMAILJS_PRIVATE_KEY, // 👈 importante, sin esto da error
-                        template_params: {
-                            name: "Cliente",
-                            email: order.customer_email,
-                            time: new Date().toLocaleString(),
-                            message: "Gracias por tu compra. Descargá tus fotos desde este enlace:",
-                            download_link: signedUrls[0],
-                        },
-                    });
-
-                    console.log("📧 EmailJS enviado:", emailRes.data);
-                } catch (err) {
-                    console.error("❌ Error enviando email:", err.response?.data || err.message);
-                }
-
-                console.log("📧 Respuesta de EmailJS:", await emailRes.text());
-
                 // 6. Actualizar estado a paid
                 await supabaseAdmin
                     .from("orders")

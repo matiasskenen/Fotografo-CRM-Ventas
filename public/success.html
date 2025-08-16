@@ -113,6 +113,14 @@
         <p class="text-sm text-gray-500 mt-8">Si tienes algún problema, contacta a soporte.</p>
     </div>
 
+    <!-- EmailJS -->
+    <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+    <script>
+      (function(){
+        emailjs.init("⚠️TU_PUBLIC_KEY"); // Poner tu Public Key de EmailJS
+      })();
+    </script>
+
     <script>
     const BACKEND_URL = "https://school-photos-backend.onrender.com";
 
@@ -138,6 +146,27 @@
         return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
     };
 
+    async function sendConfirmationEmail(customerEmail, orderId, photos) {
+        try {
+            const templateParams = {
+                to_email: customerEmail,
+                order_id: orderId,
+                photo_count: photos.length,
+                photos_list: photos.map(p => p.student_code || "N/A").join(", ")
+            };
+
+            const response = await emailjs.send(
+                "⚠️TU_SERVICE_ID",   // ID del servicio
+                "⚠️TU_TEMPLATE_ID",  // ID del template
+                templateParams
+            );
+
+            console.log("📧 Email enviado:", response.status, response.text);
+        } catch (error) {
+            console.error("❌ Error enviando email:", error);
+        }
+    }
+
     async function fetchOrderDetailsWithRetry(orderId, customerEmail, maxRetries = 12, delay = 5000) {
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -162,6 +191,10 @@
                         purchasedPhotosContainer.appendChild(photoItem);
                     });
                     showMessage(`¡Se encontraron ${data.photos.length} fotos para descargar!`, 'success');
+
+                    // 📧 Enviar email de confirmación
+                    sendConfirmationEmail(customerEmail, orderId, data.photos);
+
                     return; // Salimos, ya tenemos las fotos
                 } else {
                     showMessage(`Intento ${attempt}/${maxRetries}: Esperando confirmación de pago...`, 'info');
@@ -189,7 +222,7 @@
         setLoading(true);
         fetchOrderDetailsWithRetry(orderId, customerEmail).finally(() => setLoading(false));
     });
-</script>
+    </script>
 
 </body>
 </html>
