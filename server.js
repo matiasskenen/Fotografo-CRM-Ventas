@@ -529,16 +529,17 @@ app.post("/mercadopago-webhook", express.json(), async (req, res) => {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        Authorization: `Bearer ${process.env.EMAILJS_PRIVATE_KEY}`,
+                        Authorization: `Bearer ${process.env.EMAILJS_PRIVATE_KEY}`, // 👈 acá usás la Private Key
                     },
                     body: JSON.stringify({
                         service_id: process.env.EMAILJS_SERVICE_ID,
                         template_id: process.env.EMAILJS_TEMPLATE_ID,
+                        user_id: process.env.EMAILJS_PUBLIC_KEY, // 👈 este es tu Public Key (User ID)
                         template_params: {
                             name: "Cliente",
                             email: order.customer_email,
                             time: new Date().toLocaleString(),
-                            message: "Gracias por tu compra. Descargá tus fotos:",
+                            message: "Gracias por tu compra. Descargá tus fotos desde este enlace:",
                             download_link: signedUrls[0],
                         },
                     }),
