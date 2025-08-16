@@ -526,9 +526,11 @@ app.post("/mercadopago-webhook", express.json(), async (req, res) => {
                 // 6. Actualizar estado a paid
                 await supabaseAdmin
                     .from("orders")
-                    .update({ status: "paid", mercado_pago_payment_id: orderData.payments?.[0]?.id || null })
+                    .update({ status: "paid", mercado_pago_payment_id: orderData.payments?.[0]?.id || null,
+                    download_expires_at: expiresAt.toISOString() // guardamos en formato ISO
+                    })
                     .eq("id", orderId);
-                    
+
 
                 console.log(`✅ Orden ${orderId} actualizada a 'paid' y email enviado`);
             }
@@ -558,7 +560,7 @@ app.get("/order-details/:orderId/:customerEmail", async (req, res) => {
         // Usamos supabaseAdmin para ignorar RLS en esta verificación de backend
         const { data: order, error: orderError } = await supabaseAdmin
             .from("orders")
-            .select("id, customer_email, status")
+            .select("id, customer_email, status, download_expires_at")
             .eq("id", orderId)
             .eq("customer_email", customerEmail.toLowerCase()) // No verificamos el status 'paid' aquí para que la página de éxito pueda mostrar // estados pendientes o rechazados. success.html debe manejar esto.
             .single();
@@ -615,6 +617,7 @@ app.get("/order-details/:orderId/:customerEmail", async (req, res) => {
                 id: order.id,
                 customer_email: order.customer_email,
                 status: order.status,
+                download_expires_at: order.download_expires_at,
             },
             photos: photosWithPublicUrls,
         });
