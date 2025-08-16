@@ -454,19 +454,16 @@ app.post("/mercadopago-webhook", express.json(), async (req, res) => {
     console.log("📩 Webhook recibido de Mercado Pago");
 
     try {
-        const { topic, id, resource } = req.query; // Mercado Pago envía estos params
+        const { topic, id, resource } = req.query;
         console.log("Query Params:", req.query);
-        console.log("Cuerpo del Webhook (JSON):", req.body);
+        console.log("Cuerpo del Webhook:", req.body);
 
-        let paymentId = null;
         let merchantOrderId = null;
 
-        /**
-         * 1️⃣ Caso: topic "payment"
-         */
+        // Caso 1: payment
         if (topic === "payment" || req.body.type === "payment") {
-            paymentId = id || req.body.data?.id || req.body.resource;
-            console.log("🔍 ID de pago recibido:", paymentId);
+            const paymentId = id || req.body.data?.id || req.body.resource;
+            console.log("🔍 ID de pago:", paymentId);
 
             const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
                 headers: { Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}` },
@@ -480,12 +477,10 @@ app.post("/mercadopago-webhook", express.json(), async (req, res) => {
             }
         }
 
-        /**
-         * 2️⃣ Caso: topic "merchant_order"
-         */
+        // Caso 2: merchant_order
         if (topic === "merchant_order" || req.body.topic === "merchant_order") {
             merchantOrderId = id || resource?.split("/").pop();
-            console.log("🔍 ID de merchant_order recibido:", merchantOrderId);
+            console.log("🔍 ID de merchant_order:", merchantOrderId);
 
             const orderRes = await fetch(`https://api.mercadopago.com/merchant_orders/${merchantOrderId}`, {
                 headers: { Authorization: `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}` },
@@ -494,31 +489,42 @@ app.post("/mercadopago-webhook", express.json(), async (req, res) => {
             const orderData = await orderRes.json();
             console.log("📦 Datos de la orden:", orderData);
 
-            // Si está pagada, procesamos
             if (orderData.order_status === "paid" || orderData.paid_amount >= orderData.total_amount) {
-                console.log(`✅ Orden ${orderData.external_reference} pagada, habilitando descarga...`);
+                const orderId = orderData.external_reference;
 
-                // 3️⃣ Obtener info de la orden en Supabase
-                const { data: order, error: orderError } = await supabaseAdmin.from("orders").select("customer_email, photos").eq("id", orderData.external_reference).single();
+                // 1. Obtener datos de la orden
+                const { data: order, error: orderError } = await supabaseAdmin.from("orders").select("customer_email").eq("id", orderId).single();
 
                 if (orderError || !order) {
                     console.error("❌ Error obteniendo orden:", orderError);
-                    return res.status(500).json({ error: "No se pudo obtener la orden" });
+                    return res.sendStatus(500);
                 }
 
-                // 4️⃣ Generar URLs firmadas (7 días = 604800 segundos)
+                // 2. Buscar fotos desde order_items
+                const { data: orderItems, error: itemsError } = await supabaseAdmin.from("order_items").select("photo_id").eq("order_id", orderId);
+
+                if (itemsError || !orderItems.length) {
+                    console.error("❌ Error obteniendo order_items:", itemsError);
+                    return res.sendStatus(500);
+                }
+
+                // 3. Obtener rutas de fotos desde photos
+                const photoIds = orderItems.map((item) => item.photo_id);
+                const { data: photos, error: photosError } = await supabaseAdmin.from("photos").select("original_file_path").in("id", photoIds);
+
+                if (photosError || !photos.length) {
+                    console.error("❌ Error obteniendo fotos:", photosError);
+                    return res.sendStatus(500);
+                }
+
+                // 4. Generar URLs firmadas
                 const signedUrls = [];
-                for (const photoPath of order.photos) {
-                    const { data: signedData, error: signedError } = await supabaseAdmin.storage.from("fotos-originales").createSignedUrl(photoPath, 604800);
-
-                    if (signedError) {
-                        console.error("❌ Error generando URL firmada:", signedError);
-                        continue;
-                    }
-                    signedUrls.push(signedData.signedUrl);
+                for (const photo of photos) {
+                    const { data: signedData, error: signedError } = await supabaseAdmin.storage.from("fotos-originales").createSignedUrl(photo.original_file_path, 604800);
+                    if (!signedError) signedUrls.push(signedData.signedUrl);
                 }
 
-                // 5️⃣ Enviar email con EmailJS
+                // 5. Enviar email con EmailJS
                 const emailRes = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -530,29 +536,21 @@ app.post("/mercadopago-webhook", express.json(), async (req, res) => {
                             name: "Cliente",
                             email: order.customer_email,
                             time: new Date().toLocaleString(),
-                            message: "Gracias por tu compra. Descargá tus fotos desde el siguiente botón:",
-                            download_link: signedUrls[0], // si querés enviar varios, ajusta el template
+                            message: "Gracias por tu compra. Descargá tus fotos:",
+                            download_link: signedUrls[0],
                         },
                     }),
                 });
 
-                const emailData = await emailRes.text();
-                console.log("📧 Respuesta de EmailJS:", emailRes.status, emailData);
+                console.log("📧 Respuesta de EmailJS:", await emailRes.text());
 
-                if (!emailRes.ok) {
-                    console.error("❌ Error enviando email:", emailData);
-                }
-
-                // 6️⃣ Actualizar estado de la orden en Supabase
+                // 6. Actualizar estado a paid
                 await supabaseAdmin
                     .from("orders")
-                    .update({
-                        status: "paid",
-                        mercado_pago_payment_id: orderData.payments?.[0]?.id || null,
-                    })
-                    .eq("id", orderData.external_reference);
+                    .update({ status: "paid", mercado_pago_payment_id: orderData.payments?.[0]?.id || null })
+                    .eq("id", orderId);
 
-                console.log(`📩 Email enviado a ${order.customer_email} con ${signedUrls.length} enlaces`);
+                console.log(`✅ Orden ${orderId} actualizada a 'paid' y email enviado`);
             }
         }
 
@@ -562,6 +560,7 @@ app.post("/mercadopago-webhook", express.json(), async (req, res) => {
         res.sendStatus(500);
     }
 });
+
 
 
 // --- NUEVA RUTA: Obtener Detalles de Orden para Página de Éxito ---
