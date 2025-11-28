@@ -11,20 +11,61 @@
 </head>
 <body class="flex flex-col min-h-screen">
 
+  <!-- Auth Check Script -->
+  <script>
+    // Verificar autenticación al cargar la página
+    (function() {
+      const token = localStorage.getItem('photographer_token') || 
+                   sessionStorage.getItem('photographer_token');
+      
+      if (!token) {
+        // No hay token, redirigir al login
+        window.location.href = '/photographer-login.html';
+      }
+    })();
+  </script>
+
   <!-- HEADER -->
   <header class="bg-white shadow-md py-4">
     <div class="container flex justify-between items-center">
-      <div class="text-2xl font-bold text-indigo-700">[ LOGO FOTÓGRAFO ]</div>
+      <div class="text-2xl font-bold text-indigo-700">
+        📸 <span id="photographerName">Panel de Fotógrafo</span>
+      </div>
       <nav>
         <ul class="flex space-x-6">
           <li><a href="#" data-page="dashboard" class="nav-link text-gray-700 hover:text-indigo-600 font-medium">Dashboard</a></li>
           <li><a href="#" data-page="albumes" class="nav-link text-gray-700 hover:text-indigo-600 font-medium">Gestionar Álbumes</a></li>
           <li><a href="#" data-page="pedidos" class="nav-link text-gray-700 hover:text-indigo-600 font-medium">Ver Pedidos</a></li>
-          <li><a href="#" id="logoutButton" class="text-gray-700 hover:text-indigo-600 font-medium">Salir</a></li>
+          <li><a href="#" id="logoutButton" class="text-red-600 hover:text-red-700 font-medium">🚪 Salir</a></li>
         </ul>
       </nav>
     </div>
   </header>
+
+  <script>
+    // Mostrar nombre del fotógrafo
+    const photographerName = localStorage.getItem('photographer_name') || 
+                            sessionStorage.getItem('photographer_name');
+    if (photographerName) {
+      document.getElementById('photographerName').textContent = photographerName;
+    }
+
+    // Logout handler
+    document.getElementById('logoutButton').addEventListener('click', (e) => {
+      e.preventDefault();
+      if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+        localStorage.removeItem('photographer_token');
+        localStorage.removeItem('photographer_id');
+        localStorage.removeItem('photographer_name');
+        localStorage.removeItem('photographer_email');
+        sessionStorage.removeItem('photographer_token');
+        sessionStorage.removeItem('photographer_id');
+        sessionStorage.removeItem('photographer_name');
+        sessionStorage.removeItem('photographer_email');
+        window.location.href = '/photographer-login.html';
+      }
+    });
+  </script>
 
   <!-- CONTENIDO -->
   <main id="content" class="flex-grow container py-8">

@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Fotógrafo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 450px;
+            overflow: hidden;
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 2.5em;
+            backdrop-filter: blur(10px);
+        }
+
+        .login-header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .login-header p {
+            opacity: 0.9;
+            font-size: 1em;
+        }
+
+        .login-form {
+            padding: 40px 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 1.2em;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input::placeholder {
+            color: #999;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #999;
+            user-select: none;
+            font-size: 1.2em;
+        }
+
+        .password-toggle:hover {
+            color: #667eea;
+        }
+
+        .remember-forgot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            font-size: 0.9em;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+
+        .remember-me input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .forgot-password {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .forgot-password:hover {
+            text-decoration: underline;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .login-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 25px 0;
+            color: #999;
+            position: relative;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .divider::before {
+            left: 0;
+        }
+
+        .divider::after {
+            right: 0;
+        }
+
+        .register-link {
+            text-align: center;
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .register-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: #fee;
+            border: 2px solid #fcc;
+            color: #c00;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: #efe;
+            border: 2px solid #cfc;
+            color: #0a0;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .back-home {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-home a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            opacity: 0.9;
+            transition: opacity 0.3s;
+        }
+
+        .back-home a:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 480px) {
+            .login-container {
+                border-radius: 15px;
+            }
+
+            .login-header {
+                padding: 30px 20px;
+            }
+
+            .login-form {
+                padding: 30px 20px;
+            }
+
+            .remember-forgot {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="logo-icon">📸</div>
+            <h1>Bienvenido</h1>
+            <p>Ingresa a tu cuenta de fotógrafo</p>
+        </div>
+
+        <form class="login-form" id="loginForm">
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">✉️</span>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="tu@email.com" 
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <div class="input-wrapper">
+                    <span class="input-icon">🔒</span>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Tu contraseña" 
+                        required
+                        autocomplete="current-password"
+                    >
+                    <span class="password-toggle" onclick="togglePassword()">👁️</span>
+                </div>
+            </div>
+
+            <div class="remember-forgot">
+                <label class="remember-me">
+                    <input type="checkbox" id="rememberMe" name="rememberMe">
+                    <span>Recordarme</span>
+                </label>
+                <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
+            </div>
+
+            <button type="submit" class="login-btn" id="loginBtn">
+                Iniciar Sesión
+            </button>
+
+            <div class="divider">o</div>
+
+            <div class="register-link">
+                ¿No tienes cuenta? <a href="/photographer-register.html">Regístrate aquí</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="back-home">
+        <a href="/">← Volver al inicio</a>
+    </div>
+
+    <script>
+        const BACKEND_URL = window.BACKEND_URL || 'http://localhost:3000';
+
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const toggle = document.querySelector('.password-toggle');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggle.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggle.textContent = '👁️';
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+            
+            setTimeout(() => {
+                errorEl.classList.remove('show');
+            }, 5000);
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const successEl = document.getElementById('successMessage');
+            successEl.textContent = message;
+            successEl.classList.add('show');
+            
+            setTimeout(() => {
+                successEl.classList.remove('show');
+            }, 3000);
+        }
+
+        // Handle login form submission
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+            const loginBtn = document.getElementById('loginBtn');
+
+            // Validación básica
+            if (!email || !password) {
+                showError('Por favor completa todos los campos.');
+                return;
+            }
+
+            // Deshabilitar botón durante el proceso
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Iniciando sesión...';
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Guardar token y datos del usuario
+                    const storage = rememberMe ? localStorage : sessionStorage;
+                    storage.setItem('photographer_token', data.token);
+                    storage.setItem('photographer_id', data.photographer.id);
+                    storage.setItem('photographer_name', data.photographer.business_name);
+                    storage.setItem('photographer_email', data.photographer.email);
+
+                    showSuccess('¡Inicio de sesión exitoso! Redirigiendo...');
+
+                    // Redirigir al dashboard
+                    setTimeout(() => {
+                        window.location.href = '/admin/admin_dashboard.html';
+                    }, 1500);
+
+                } else {
+                    showError(data.message || 'Email o contraseña incorrectos.');
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Iniciar Sesión';
+                }
+
+            } catch (error) {
+                console.error('Error al iniciar sesión:', error);
+                showError('Error de conexión. Por favor, intenta nuevamente.');
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Iniciar Sesión';
+            }
+        });
+
+        // Auto-fill si hay token guardado
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('photographer_token') || 
+                         sessionStorage.getItem('photographer_token');
+            
+            if (token) {
+                // Ya está logueado, redirigir al dashboard
+                window.location.href = '/admin/admin_dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html>

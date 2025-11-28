@@ -11,7 +11,7 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
 
 // Directorio de backups
-const BACKUP_DIR = path.join(__dirname, "backups");
+const BACKUP_DIR = path.join(__dirname, "..", "backups");
 
 // Crear directorio si no existe
 if (!fs.existsSync(BACKUP_DIR)) {

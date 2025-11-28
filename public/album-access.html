@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso al Álbum - Fotografo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+        }
+
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .album-info {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: none;
+        }
+
+        .album-info.show {
+            display: block;
+        }
+
+        .album-name {
+            font-size: 1.3em;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .album-date {
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.1em;
+            transition: all 0.3s;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .hint {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 0.9em;
+            color: #856404;
+        }
+
+        .hint strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .error {
+            background: #ffe0e0;
+            color: #c00;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #c00;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 30px 0;
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #ddd;
+        }
+
+        .divider span {
+            padding: 0 15px;
+        }
+
+        .contact-section {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .contact-title {
+            color: #555;
+            font-size: 0.95em;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .contact-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .contact-btn {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .whatsapp-btn {
+            background: #25D366;
+            color: white;
+        }
+
+        .whatsapp-btn:hover {
+            background: #1ea952;
+            transform: translateY(-2px);
+        }
+
+        .email-btn {
+            background: #EA4335;
+            color: white;
+        }
+
+        .email-btn:hover {
+            background: #c5342b;
+            transform: translateY(-2px);
+        }
+
+        .loading {
+            display: none;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .loading.show {
+            display: flex;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: white;
+            text-decoration: none;
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="logo">🔐</div>
+            <h1>Acceso al Álbum</h1>
+            <p class="subtitle">Ingresa el código proporcionado por el fotógrafo</p>
+
+            <div class="album-info" id="albumInfo">
+                <div class="album-name" id="albumName"></div>
+                <div class="album-date" id="albumDate"></div>
+            </div>
+
+            <form id="accessForm">
+                <div class="form-group">
+                    <label for="accessCode">Código de Acceso</label>
+                    <input 
+                        type="text" 
+                        id="accessCode" 
+                        placeholder="Ej: EVENTO2024"
+                        maxlength="20"
+                        required
+                    >
+                </div>
+
+                <div class="hint" id="hintBox" style="display: none;">
+                    <strong>💡 Pista:</strong>
+                    <span id="hintText"></span>
+                </div>
+
+                <button type="submit" class="btn" id="submitBtn">
+                    Verificar Código
+                </button>
+
+                <div class="error" id="errorBox"></div>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                </div>
+            </form>
+
+            <div class="divider">
+                <span>¿Necesitas ayuda?</span>
+            </div>
+
+            <div class="contact-section">
+                <div class="contact-title">Contacta al fotógrafo si tienes problemas:</div>
+                <div class="contact-buttons">
+                    <a href="#" class="contact-btn whatsapp-btn" id="whatsappBtn">
+                        <span>📱</span> WhatsApp
+                    </a>
+                    <a href="#" class="contact-btn email-btn" id="emailBtn">
+                        <span>✉️</span> Email
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <a href="/" class="back-link">← Volver al inicio</a>
+    </div>
+
+    <script>
+        // Obtener albumId de la URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const albumId = urlParams.get('albumId');
+
+        const BACKEND_URL = window.BACKEND_URL || 'http://localhost:3000';
+
+        // Elementos del DOM
+        const form = document.getElementById('accessForm');
+        const accessCodeInput = document.getElementById('accessCode');
+        const submitBtn = document.getElementById('submitBtn');
+        const errorBox = document.getElementById('errorBox');
+        const loading = document.getElementById('loading');
+        const albumInfo = document.getElementById('albumInfo');
+        const albumName = document.getElementById('albumName');
+        const albumDate = document.getElementById('albumDate');
+        const hintBox = document.getElementById('hintBox');
+        const hintText = document.getElementById('hintText');
+        const whatsappBtn = document.getElementById('whatsappBtn');
+        const emailBtn = document.getElementById('emailBtn');
+
+        // Configuración del fotógrafo (esto vendrá del backend en producción)
+        let photographerInfo = {
+            phone: '5491123456789', // Formato internacional sin +
+            email: 'fotografo@ejemplo.com',
+            name: 'Fotógrafo'
+        };
+
+        // Cargar información del álbum
+        async function loadAlbumInfo() {
+            if (!albumId) {
+                showError('No se especificó un álbum. Por favor, accede desde el enlace correcto.');
+                submitBtn.disabled = true;
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/albums/${albumId}/info`);
+                
+                if (!response.ok) {
+                    throw new Error('Álbum no encontrado');
+                }
+
+                const data = await response.json();
+                const album = data.album;
+
+                // Mostrar info del álbum
+                albumName.textContent = album.name;
+                
+                if (album.event_date) {
+                    const date = new Date(album.event_date);
+                    albumDate.textContent = date.toLocaleDateString('es-AR', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    });
+                }
+
+                albumInfo.classList.add('show');
+
+                // Mostrar hint si existe
+                if (album.access_code_hint) {
+                    hintText.textContent = album.access_code_hint;
+                    hintBox.style.display = 'block';
+                }
+
+                // Si no requiere código, redirigir directamente
+                if (!album.requires_access_code) {
+                    window.location.href = `/tests/gallery-viewer.html?albumId=${albumId}`;
+                }
+
+            } catch (error) {
+                showError('Error al cargar el álbum. Verifica el enlace.');
+                console.error('Error:', error);
+            }
+        }
+
+        // Configurar botones de contacto
+        function setupContactButtons() {
+            // WhatsApp
+            const whatsappMessage = encodeURIComponent(`Hola, tengo problemas para acceder al álbum "${albumName.textContent || 'fotos'}". ¿Puedes ayudarme con el código de acceso?`);
+            whatsappBtn.href = `https://wa.me/${photographerInfo.phone}?text=${whatsappMessage}`;
+
+            // Email
+            const emailSubject = encodeURIComponent('Ayuda con código de acceso');
+            const emailBody = encodeURIComponent(`Hola ${photographerInfo.name},\n\nTengo problemas para acceder al álbum "${albumName.textContent || 'fotos'}".\n\n¿Puedes ayudarme con el código de acceso?\n\nGracias!`);
+            emailBtn.href = `mailto:${photographerInfo.email}?subject=${emailSubject}&body=${emailBody}`;
+        }
+
+        // Verificar código de acceso
+        async function verifyAccessCode(code) {
+            try {
+                loading.classList.add('show');
+                submitBtn.disabled = true;
+                hideError();
+
+                const response = await fetch(`${BACKEND_URL}/albums/${albumId}/verify-access`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ accessCode: code })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Código correcto - Guardar en sessionStorage y redirigir
+                    sessionStorage.setItem(`album_${albumId}_access`, 'granted');
+                    sessionStorage.setItem(`album_${albumId}_code`, code);
+                    
+                    // Redirigir al índice de fotos
+                    window.location.href = `/tests/gallery-viewer.html?albumId=${albumId}`;
+                } else {
+                    // Código incorrecto
+                    showError(data.message || 'Código incorrecto. Intenta nuevamente.');
+                    
+                    // Actualizar hint si viene en la respuesta
+                    if (data.hint && !hintBox.style.display) {
+                        hintText.textContent = data.hint;
+                        hintBox.style.display = 'block';
+                    }
+                    
+                    // Limpiar input
+                    accessCodeInput.value = '';
+                    accessCodeInput.focus();
+                }
+
+            } catch (error) {
+                showError('Error al verificar el código. Por favor, intenta nuevamente.');
+                console.error('Error:', error);
+            } finally {
+                loading.classList.remove('show');
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Mostrar error
+        function showError(message) {
+            errorBox.textContent = message;
+            errorBox.classList.add('show');
+        }
+
+        // Ocultar error
+        function hideError() {
+            errorBox.classList.remove('show');
+        }
+
+        // Manejar submit del formulario
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const code = accessCodeInput.value.trim();
+            
+            if (!code) {
+                showError('Por favor, ingresa el código de acceso');
+                return;
+            }
+
+            verifyAccessCode(code);
+        });
+
+        // Auto-mayúsculas en el input
+        accessCodeInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+            hideError();
+        });
+
+        // Cargar información al iniciar
+        window.addEventListener('DOMContentLoaded', () => {
+            loadAlbumInfo();
+            setupContactButtons();
+        });
+    </script>
+</body>
+</html>

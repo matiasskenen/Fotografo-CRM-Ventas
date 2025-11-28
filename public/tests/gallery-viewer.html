@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galería de Fotos</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.2em;
+        }
+
+        .album-title {
+            font-size: 1.1em;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 30px;
+        }
+
+        .album-header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .album-header h1 {
+            font-size: 2.5em;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .album-meta {
+            display: flex;
+            gap: 30px;
+            color: #666;
+            font-size: 1em;
+            margin-top: 15px;
+        }
+
+        .album-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .photo-count {
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .photo-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .photo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .photo-wrapper {
+            position: relative;
+            padding-top: 100%;
+            overflow: hidden;
+            background: #f0f0f0;
+        }
+
+        .photo-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.7));
+            opacity: 0;
+            transition: opacity 0.3s;
+            display: flex;
+            align-items: flex-end;
+            padding: 15px;
+        }
+
+        .photo-card:hover .photo-overlay {
+            opacity: 1;
+        }
+
+        .photo-actions {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .select-btn {
+            flex: 1;
+            padding: 10px;
+            background: white;
+            color: #667eea;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .select-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .select-btn.selected {
+            background: #10b981;
+            color: white;
+        }
+
+        .selected-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #10b981;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            box-shadow: 0 2px 10px rgba(16, 185, 129, 0.5);
+        }
+
+        .photo-card.selected .selected-badge {
+            display: flex;
+        }
+
+        .cart-footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            box-shadow: 0 -2px 20px rgba(0,0,0,0.1);
+            padding: 20px 30px;
+            transform: translateY(100%);
+            transition: transform 0.3s;
+            z-index: 1000;
+        }
+
+        .cart-footer.show {
+            transform: translateY(0);
+        }
+
+        .cart-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .cart-info {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .cart-count {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .cart-total {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .checkout-btn {
+            padding: 15px 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .checkout-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-box {
+            background: #fee;
+            border: 2px solid #fcc;
+            color: #c00;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 15px;
+            }
+
+            .cart-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .checkout-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">📸</div>
+                <span>Fotografo</span>
+            </div>
+            <div class="album-title" id="headerAlbumTitle">Cargando...</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="album-header">
+            <h1 id="albumName">Cargando álbum...</h1>
+            <div class="album-meta">
+                <div class="album-meta-item">
+                    <span>📅</span>
+                    <span id="albumDate">-</span>
+                </div>
+                <div class="album-meta-item">
+                    <span class="photo-count" id="photoCount">0 fotos</span>
+                </div>
+                <div class="album-meta-item">
+                    <span>💰</span>
+                    <span id="pricePerPhoto">$0</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="content">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Cargando fotos...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="cart-footer" id="cartFooter">
+        <div class="cart-content">
+            <div class="cart-info">
+                <div class="cart-count">
+                    <span id="selectedCount">0</span> fotos seleccionadas
+                </div>
+                <div class="cart-total" id="totalPrice">$0</div>
+            </div>
+            <button class="checkout-btn" id="checkoutBtn" onclick="proceedToCheckout()">
+                Comprar Fotos →
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = window.BACKEND_URL || 'http://localhost:3000';
+        const urlParams = new URLSearchParams(window.location.search);
+        const albumId = urlParams.get('albumId');
+
+        let selectedPhotos = new Set();
+        let albumData = null;
+        let photosData = [];
+
+        // Verificar acceso
+        function checkAccess() {
+            if (!albumId) {
+                showError('No se especificó un álbum válido.');
+                return false;
+            }
+
+            const hasAccess = sessionStorage.getItem(`album_${albumId}_access`);
+            if (!hasAccess) {
+                // Redirigir a página de código de acceso
+                window.location.href = `/album-access.html?albumId=${albumId}`;
+                return false;
+            }
+
+            return true;
+        }
+
+        // Cargar álbum y fotos
+        async function loadAlbumAndPhotos() {
+            if (!checkAccess()) return;
+
+            try {
+                // Cargar info del álbum
+                const albumResponse = await fetch(`${BACKEND_URL}/albums/${albumId}/info`);
+                if (!albumResponse.ok) throw new Error('Error al cargar álbum');
+                
+                const albumResult = await albumResponse.json();
+                albumData = albumResult.album;
+
+                // Cargar fotos del álbum
+                const photosResponse = await fetch(`${BACKEND_URL}/albums/${albumId}/photos`);
+                if (!photosResponse.ok) throw new Error('Error al cargar fotos');
+                
+                const photosResult = await photosResponse.json();
+                photosData = photosResult.photos || [];
+
+                // Renderizar
+                renderAlbumHeader();
+                renderPhotos();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error al cargar el álbum. Por favor, intenta nuevamente.');
+            }
+        }
+
+        // Renderizar header del álbum
+        function renderAlbumHeader() {
+            document.getElementById('albumName').textContent = albumData.name;
+            document.getElementById('headerAlbumTitle').textContent = albumData.name;
+            
+            if (albumData.event_date) {
+                const date = new Date(albumData.event_date);
+                document.getElementById('albumDate').textContent = date.toLocaleDateString('es-AR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+            }
+
+            document.getElementById('photoCount').textContent = `${photosData.length} fotos`;
+            
+            // El precio viene del álbum (después lo agregaremos a la respuesta)
+            const pricePerPhoto = albumData.price_per_photo || 1500;
+            document.getElementById('pricePerPhoto').textContent = `$${pricePerPhoto} por foto`;
+        }
+
+        // Renderizar fotos
+        function renderPhotos() {
+            const content = document.getElementById('content');
+            
+            if (photosData.length === 0) {
+                content.innerHTML = '<div class="error-box">Este álbum no tiene fotos aún.</div>';
+                return;
+            }
+
+            const gallery = document.createElement('div');
+            gallery.className = 'gallery';
+
+            photosData.forEach(photo => {
+                const card = createPhotoCard(photo);
+                gallery.appendChild(card);
+            });
+
+            content.innerHTML = '';
+            content.appendChild(gallery);
+        }
+
+        // Crear card de foto
+        function createPhotoCard(photo) {
+            const card = document.createElement('div');
+            card.className = 'photo-card';
+            card.dataset.photoId = photo.id;
+
+            card.innerHTML = `
+                <div class="photo-wrapper">
+                    <img src="${photo.watermarked_url}" alt="${photo.original_filename}" class="photo-img">
+                    <div class="selected-badge">✓</div>
+                    <div class="photo-overlay">
+                        <div class="photo-actions">
+                            <button class="select-btn" onclick="togglePhoto('${photo.id}', event)">
+                                Seleccionar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // Toggle selección de foto
+        function togglePhoto(photoId, event) {
+            event.stopPropagation();
+            
+            const card = document.querySelector(`[data-photo-id="${photoId}"]`);
+            const btn = card.querySelector('.select-btn');
+
+            if (selectedPhotos.has(photoId)) {
+                selectedPhotos.delete(photoId);
+                card.classList.remove('selected');
+                btn.textContent = 'Seleccionar';
+                btn.classList.remove('selected');
+            } else {
+                selectedPhotos.add(photoId);
+                card.classList.add('selected');
+                btn.textContent = '✓ Seleccionada';
+                btn.classList.add('selected');
+            }
+
+            updateCart();
+        }
+
+        // Actualizar carrito
+        function updateCart() {
+            const count = selectedPhotos.size;
+            const pricePerPhoto = albumData?.price_per_photo || 1500;
+            const total = count * pricePerPhoto;
+
+            document.getElementById('selectedCount').textContent = count;
+            document.getElementById('totalPrice').textContent = `$${total.toLocaleString('es-AR')}`;
+
+            const cartFooter = document.getElementById('cartFooter');
+            if (count > 0) {
+                cartFooter.classList.add('show');
+            } else {
+                cartFooter.classList.remove('show');
+            }
+        }
+
+        // Proceder al checkout
+        function proceedToCheckout() {
+            if (selectedPhotos.size === 0) return;
+
+            const photoIds = Array.from(selectedPhotos);
+            
+            // Guardar en sessionStorage para la página de checkout
+            sessionStorage.setItem('selectedPhotos', JSON.stringify(photoIds));
+            sessionStorage.setItem('albumId', albumId);
+
+            // Redirigir a página de checkout (puedes crear una o usar MercadoPago directo)
+            alert(`Redirigiendo al pago de ${selectedPhotos.size} fotos...`);
+            
+            // TODO: Implementar checkout real
+            // window.location.href = '/checkout.html';
+        }
+
+        // Mostrar error
+        function showError(message) {
+            const content = document.getElementById('content');
+            content.innerHTML = `
+                <div class="error-box">
+                    <p>${message}</p>
+                    <a href="/" class="back-link">← Volver al inicio</a>
+                </div>
+            `;
+        }
+
+        // Cargar al iniciar
+        window.addEventListener('DOMContentLoaded', loadAlbumAndPhotos);
+    </script>
+</body>
+</html>

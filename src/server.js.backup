@@ -1,0 +1,983 @@
+// Carga las variables de entorno PRIMERO
+require("dotenv").config();
+
+console.log("=== ENTORNO DETECTADO ===");
+console.log("process.env.RENDER:", process.env.RENDER ? "Render" : "Local");
+console.log("Webhook secret (masked):", process.env.MERCADOPAGO_WEBHOOK_SECRET?.slice(0, 4) + "****" + process.env.MERCADOPAGO_WEBHOOK_SECRET?.slice(-4));
+console.log("===========================");
+
+// server.js
+const fetch = (...args) => import("node-fetch").then(({ default: fetch }) => fetch(...args));
+
+const express = require("express");
+const sharp = require("sharp");
+const path = require("path");
+const fs = require("fs");
+const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
+
+// Configuración centralizada
+const {
+    supabase,
+    supabaseAdmin,
+    ORIGINAL_BUCKET_NAME,
+    WATERMARKED_BUCKET_NAME,
+    ORDER_FIELD_NAME,
+    mercadopago,
+    upload,
+} = require("./config");
+
+// Utilidades
+const logger = require("./utils/logger");
+
+// Middleware
+const { requireAuth, optionalAuth } = require("./middleware/auth");
+const metricsMiddleware = require("./middleware/metricsMiddleware");
+
+// Controllers
+const albumController = require("./controllers/albumController");
+const photoController = require("./controllers/photoController");
+const orderController = require("./controllers/orderController");
+const paymentController = require("./controllers/paymentController");
+const adminController = require("./controllers/adminController");
+const monitoringController = require("./controllers/monitoringController");
+const webhookController = require("./controllers/webhookController");
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Trust proxy - CRÍTICO para Render/Heroku/producción detrás de reverse proxy
+app.set("trust proxy", 1);
+
+// --- Middleware para tracking de métricas ---
+app.use(metricsMiddleware);
+
+// Acceso a clientes de MercadoPago
+const { preference, payment, getMerchantOrderWithRetry } = mercadopago;
+
+// --- Middlewares ---
+// SEGURIDAD: Helmet para headers HTTP seguros
+app.use(
+    helmet({
+        contentSecurityPolicy: false, // Deshabilitado porque usamos CDN de Tailwind
+        crossOriginEmbedderPolicy: false, // Necesario para imágenes de Supabase
+        hsts: process.env.NODE_ENV === "production" ? { maxAge: 31536000 } : false,
+    })
+);
+
+// SEGURIDAD: CORS configurado con whitelist
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : ["https://school-photos-backend.onrender.com"]; // Valor por defecto para producción
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Permitir requests sin origin (como mobile apps, Postman, curl)
+        if (!origin) return callback(null, true);
+
+        // En desarrollo, permitir localhost
+        console.log("🔍 CORS CHECK:", { 
+            origin, 
+            NODE_ENV: process.env.NODE_ENV, 
+            isDev: process.env.NODE_ENV !== 'production' 
+        });
+        
+        if (process.env.NODE_ENV !== 'production') {
+            console.log("✅ Permitido por NODE_ENV");
+            return callback(null, true);
+        }
+
+        if (allowedOrigins.indexOf(origin) !== -1) {
+            callback(null, true);
+        } else {
+            logger.warn("CORS bloqueado", { origin });
+            callback(new Error("No permitido por CORS"));
+        }
+    },
+    credentials: true,
+    optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions));
+
+// SEGURIDAD: Rate limiting general
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 100, // Límite de 100 requests por ventana
+    message: "Demasiadas peticiones desde esta IP, por favor intenta más tarde.",
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res) => {
+        logger.warn("Rate limit excedido", {
+            ip: req.ip,
+            path: req.path,
+        });
+        res.status(429).json({
+            error: "Demasiadas peticiones, por favor intenta más tarde.",
+            retryAfter: "15 minutos",
+        });
+    },
+});
+
+// SEGURIDAD: Rate limiting estricto para login
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutos
+    max: 5, // Solo 5 intentos de login
+    message: "Demasiados intentos de login, por favor intenta más tarde.",
+    skipSuccessfulRequests: false, // Contar todos los intentos
+    handler: (req, res) => {
+        logger.warn("Rate limit de auth excedido", {
+            ip: req.ip,
+            email: req.body?.email,
+        });
+        res.status(429).json({
+            error: "Demasiados intentos de login. Por seguridad, espera 15 minutos.",
+            retryAfter: "15 minutos",
+        });
+    },
+});
+
+// SEGURIDAD: Rate limiting para creación de recursos
+const createLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hora
+    max: 20, // 20 creaciones por hora
+    message: "Límite de creación alcanzado.",
+    handler: (req, res) => {
+        logger.warn("Rate limit de creación excedido", {
+            ip: req.ip,
+            path: req.path,
+        });
+        res.status(429).json({
+            error: "Has alcanzado el límite de creaciones por hora.",
+            retryAfter: "1 hora",
+        });
+    },
+});
+
+// SEGURIDAD: Rate limiting para webhooks (más permisivo)
+const webhookLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minuto
+    max: 30, // 30 requests por minuto
+    message: "Webhook rate limit excedido",
+});
+
+// Aplicar rate limiting general a todas las rutas
+app.use(generalLimiter);
+
+app.use(express.json()); // Para parsear cuerpos de petición JSON
+app.use(express.urlencoded({ extended: true })); // Para parsear datos de formularios URL-encoded
+
+// Sirve los archivos estáticos desde la carpeta 'public'
+app.use(express.static(path.join(__dirname, "..", "public")));
+
+// --- Rutas ---
+
+// Servir la página principal (index.html) en la raíz
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "..", "public", "index.html"));
+});
+
+// Ruta de estado / prueba para verificar que el servidor está funcionando
+app.get("/status", (req, res) => {
+    res.send("Backend de la Plataforma de Fotos Escolares funcionando!");
+});
+
+// Ruta de prueba para verificar la conexión a Supabase
+app.get("/test-supabase", async (req, res) => {
+    try {
+        // Usamos supabaseAdmin para asegurarnos de que la conexión de servicio funciona
+        const { data, error } = await supabaseAdmin.from("albums").select("*").limit(1);
+
+        if (error) {
+            console.error("Error al probar Supabase:", error);
+            return res.status(500).json({ message: "Error al conectar con Supabase", error: error.message });
+        }
+        res.status(200).json({ message: "Conexión a Supabase exitosa. Datos de álbumes (si hay):", data });
+    } catch (err) {
+        console.error("Error inesperado en /test-supabase:", err);
+        res.status(500).json({ message: "Error inesperado del servidor" });
+    }
+});
+
+// --- RUTAS DE ÁLBUMES ---
+app.get("/albums", requireAuth, albumController.getAlbums);
+app.post("/albums", requireAuth, createLimiter, albumController.createAlbum);
+app.get("/albums/:albumId/photos", albumController.getAlbumPhotos);
+app.get("/albums-with-photos", requireAuth, albumController.getAlbumsWithPhotos);
+app.delete("/albums/:id", requireAuth, albumController.deleteAlbum);
+app.put("/albums/:id", albumController.updateAlbum);
+
+// Importar rutas
+const authRoutes = require('./routes/auth');
+const subscriptionRoutes = require('./routes/subscriptions');
+
+// Montar rutas
+app.use('/auth', authLimiter, authRoutes);
+app.use('/subscriptions', subscriptionRoutes);
+
+// --- RUTAS DE PAGOS ---
+app.post("/create-payment-preference", paymentController.createPaymentPreference);
+app.post("/payments/create-payment-preference", paymentController.createPaymentPreference);
+app.post("/simulate-payment", express.json(), paymentController.simulatePayment);
+
+// --- RUTAS DE FOTOS ---
+app.post("/upload-photos/:albumId", requireAuth, upload.array("photos"), photoController.uploadPhotos);
+app.get("/download-photo/:photoId/:orderId/:customerEmail", photoController.downloadPhoto);
+app.delete("/photos/:id", requireAuth, photoController.deletePhoto);
+
+// --- WEBHOOK DE MERCADO PAGO ---
+app.post("/mercadopago-webhook", webhookLimiter, express.json(), webhookController.handleMercadoPagoWebhook);
+
+// --- RUTAS DE ÓRDENES ---
+app.get("/order-details/:orderId/:customerEmail", orderController.getOrderDetails);
+app.get("/orders", requireAuth, orderController.getOrders);
+app.delete("/orders/all", requireAuth, orderController.deleteAllOrders);
+app.delete("/orders/:id", requireAuth, orderController.deleteOrder);
+
+// --- RUTAS DE ADMINISTRACIÓN ---
+app.get("/admin/stats", requireAuth, adminController.getStats);
+app.post("/api/testing/create-test-album", adminController.createTestAlbum);
+app.delete("/api/testing/cleanup-test-data", adminController.cleanupTestData);
+app.get("/api/testing/simulate-error", adminController.simulateError);
+app.get("/api/testing/slow-endpoint", adminController.slowEndpoint);
+
+// --- RUTAS DE MONITOREO ---
+app.get("/api/monitoring/logs", monitoringController.getLogs);
+app.delete("/api/monitoring/logs", monitoringController.clearLogs);
+app.post("/api/monitoring/log-level", monitoringController.setLogLevel);
+app.post("/api/monitoring/console-logging", monitoringController.setConsoleLogging);
+app.get("/api/monitoring/metrics", monitoringController.getMetrics);
+app.delete("/api/monitoring/metrics", monitoringController.resetMetrics);
+app.get("/api/monitoring/health", monitoringController.healthCheck);
+
+// --- RUTA DE CONFIGURACIÓN FRONTEND ---
+app.get("/config.js", (req, res) => {
+    res.setHeader("Content-Type", "application/javascript");
+    const backendUrl = process.env.NODE_ENV === "development" 
+        ? `http://localhost:${process.env.PORT || 3000}`
+        : process.env.BACKEND_URL;
+    res.send(`window.BACKEND_URL = "${backendUrl}";`);
+});
+
+// --- Iniciar el servidor ---
+app.listen(PORT, () => {
+    logger.info(`Servidor backend escuchando en puerto ${PORT}`);
+    logger.info("Sistema iniciado correctamente", {
+        environment: process.env.NODE_ENV || "development",
+        port: PORT
+    });
+});
+        return res.status(400).json({ message: "ID de orden o email del cliente faltantes." });
+    }
+    if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(orderId)) {
+        return res.status(400).json({ message: "ID de orden no válido." });
+    }
+
+    try {
+        // 1. Verificar que la orden existe, está pagada y pertenece a este email
+        // Usamos supabaseAdmin para ignorar RLS en esta verificación de backend
+        const { data: order, error: orderError } = await supabaseAdmin
+            .from("orders")
+            .select("id, customer_email, status, download_expires_at")
+            .eq("id", orderId)
+            .eq("customer_email", customerEmail.toLowerCase()) // No verificamos el status 'paid' aquí para que la página de éxito pueda mostrar // estados pendientes o rechazados. success.html debe manejar esto.
+            .single();
+
+        if (orderError || !order) {
+            console.error(`Error al obtener detalles de orden: Orden ${orderId} no encontrada o email incorrecto.`, orderError?.message); // Devolvemos un 404/403 pero con un mensaje que success.html pueda interpretar
+            return res.status(404).json({ message: "Orden no encontrada o email no coincide.", status: "not_found" });
+        } // Si la orden no está pagada, devolvemos el estado actual para que el frontend lo maneje
+
+        if (order.status !== "paid") {
+            return res.status(200).json({
+                message: `La orden ${orderId} no está pagada aún. Estado actual: ${order.status}`,
+                order: {
+                    id: order.id,
+                    customer_email: order.customer_email,
+                    status: order.status,
+                },
+                photos: [], // No enviamos fotos si no está pagada
+            });
+        } // 2. Obtener los ítems (fotos) asociados a esta orden // Usamos supabaseAdmin para ignorar RLS en esta verificación de backend
+
+        const { data: orderItems, error: orderItemsError } = await supabaseAdmin.from("order_items").select("photo_id").eq("order_id", orderId);
+
+        if (orderItemsError) {
+            console.error(`Error al obtener ítems de la orden ${orderId}:`, orderItemsError.message);
+            return res.status(500).json({ message: "Error al obtener ítems de la orden." });
+        }
+
+        const photoIds = orderItems.map((oi) => oi.photo_id);
+        if (photoIds.length === 0) {
+            return res.status(404).json({ message: "No se encontraron fotos para esta orden." });
+        } // 3. Obtener los detalles de cada foto (especialmente la URL con marca de agua y student_code) // Usamos supabaseAdmin para ignorar RLS en esta verificación de backend
+
+        const { data: photos, error: photosError } = await supabaseAdmin
+            .from("photos")
+            .select("id, watermarked_file_path, student_code, price") // Seleccionamos lo que necesitamos para mostrar
+            .in("id", photoIds);
+
+        if (photosError) {
+            console.error(`Error al obtener detalles de las fotos para la orden ${orderId}:`, photosError.message);
+            return res.status(500).json({ message: "Error al obtener detalles de las fotos." });
+        }
+
+        const photosWithPublicUrls = photos.map((photo) => ({
+            id: photo.id,
+            student_code: photo.student_code,
+            price: photo.price, // Construimos la URL pública de la foto con marca de agua
+            watermarked_url: `${supabaseUrl}/storage/v1/object/public/watermarked-photos/${photo.watermarked_file_path}`,
+        }));
+
+        res.status(200).json({
+            message: `Detalles de la orden ${orderId} obtenidos exitosamente.`,
+            order: {
+                id: order.id,
+                customer_email: order.customer_email,
+                status: order.status,
+                download_expires_at: order.download_expires_at,
+            },
+            photos: photosWithPublicUrls,
+        });
+    } catch (err) {
+        console.error("❌ Error inesperado en la ruta /order-details:", err);
+        res.status(500).json({ message: "Error interno del servidor al obtener detalles de la orden." });
+    }
+});
+
+// --- NUEVA RUTA: Descarga de Fotos Originales ---
+// Ahora usa URL firmada para que el cliente descargue directo desde Supabase
+app.get("/download-photo/:photoId/:orderId/:customerEmail", async (req, res) => {
+    const { photoId, orderId, customerEmail } = req.params;
+
+    // 1. Validar parámetros
+    if (!photoId || !orderId || !customerEmail) {
+        return res.status(400).send("Faltan parámetros de descarga.");
+    }
+    if (!/^[0-9a-fA-F-]{36}$/.test(photoId) || !/^[0-9a-fA-F-]{36}$/.test(orderId)) {
+        return res.status(400).send("IDs de foto u orden no válidos.");
+    }
+
+    try {
+        // 2. Verificar que la orden existe, está pagada y pertenece al email
+        const { data: order, error: orderError } = await supabaseAdmin
+            .from("orders")
+            .select("id, customer_email, status")
+            .eq("id", orderId)
+            .eq("customer_email", customerEmail)
+            .eq("status", "paid") // solo si está pagada
+            .single();
+
+        if (orderError || !order) {
+            console.error(`❌ Descarga no autorizada. Orden ${orderId} no encontrada, no pagada o email incorrecto.`);
+            return res.status(403).send("No autorizado para descargar esta foto.");
+        }
+
+        // 3. Verificar que la foto pertenece a la orden
+        const { data: orderItem, error: orderItemError } = await supabaseAdmin.from("order_items").select("photo_id").eq("order_id", orderId).eq("photo_id", photoId).single();
+
+        if (orderItemError || !orderItem) {
+            console.error(`❌ Foto ${photoId} no encontrada en la orden ${orderId}.`);
+            return res.status(403).send("La foto no es parte de esta orden.");
+        }
+
+        // 4. Obtener la ruta original desde la tabla photos
+        const { data: photo, error: photoError } = await supabaseAdmin.from("photos").select("original_file_path").eq("id", photoId).single();
+
+        if (photoError || !photo?.original_file_path) {
+            console.error(`❌ No se encontró ruta de archivo original para foto ${photoId}.`);
+            return res.status(404).send("No se encontró la foto original.");
+        }
+
+        // 5. Generar URL firmada (válida por 7 días)
+        const { data: signed, error: signedError } = await supabaseAdmin.storage.from(ORIGINAL_BUCKET_NAME).createSignedUrl(photo.original_file_path, 60 * 60 * 24 * 7);
+
+        if (signedError || !signed?.signedUrl) {
+            console.error(`❌ Error creando URL firmada para ${photo.original_file_path}:`, signedError?.message);
+            return res.status(500).send("No se pudo generar la descarga.");
+        }
+
+        // 6. Redirigir al usuario a la URL firmada
+        // console.log(`✅ URL firmada generada para foto ${photoId}`);
+        return res.redirect(signed.signedUrl);
+    } catch (err) {
+        console.error("❌ Error inesperado en la descarga de foto:", err);
+        res.status(500).send("Error interno del servidor.");
+    }
+});
+
+// --- Iniciar el servidor ---
+app.listen(PORT, () => {
+    // console.log(`Servidor backend escuchando en http://localhost:${PORT}`);
+    // console.log("¡Listo para la acción con Supabase, Sharp y Mercado Pago Webhooks!");
+});
+
+app.get("/config.js", (req, res) => {
+    res.setHeader("Content-Type", "application/javascript");
+    // En desarrollo, usar localhost; en producción, usar BACKEND_URL del .env
+    const backendUrl = process.env.NODE_ENV === "development" 
+        ? `http://localhost:${process.env.PORT || 3000}`
+        : process.env.BACKEND_URL;
+    res.send(`window.BACKEND_URL = "${backendUrl}";`);
+});
+
+app.get("/orders", requireAuth, async (req, res) => {
+    try {
+        const photographerId = req.photographer.id;
+        
+        const { data, error } = await supabaseAdmin
+            .from("orders")
+            .select("*")
+            .eq("photographer_id", photographerId)
+            .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        res.json({ orders: data });
+    } catch (err) {
+        console.error("Error al obtener pedidos:", err);
+        res.status(500).json({ message: "Error interno al obtener pedidos" });
+    }
+});
+
+// Eliminar todos los pedidos del fotógrafo (debe estar ANTES de /orders/:id)
+app.delete("/orders/all", requireAuth, async (req, res) => {
+    try {
+        const photographerId = req.photographer.id;
+        
+        // Primero obtener todos los pedidos del fotógrafo
+        const { data: orders, error: fetchError } = await supabaseAdmin
+            .from("orders")
+            .select("id")
+            .eq("photographer_id", photographerId);
+
+        if (fetchError) throw fetchError;
+
+        // Si no hay pedidos, retornar
+        if (!orders || orders.length === 0) {
+            return res.json({ message: "No hay pedidos para eliminar" });
+        }
+
+        // Extraer todos los IDs de pedidos
+        const orderIds = orders.map((order) => order.id);
+
+        // Eliminar todos los order_items asociados
+        const { error: itemsError } = await supabaseAdmin.from("order_items").delete().in("order_id", orderIds);
+
+        if (itemsError) throw itemsError;
+
+        // Eliminar todos los pedidos
+        const { error: ordersError } = await supabaseAdmin.from("orders").delete().in("id", orderIds);
+
+        if (ordersError) throw ordersError;
+
+        res.json({ message: `${orders.length} pedidos eliminados exitosamente` });
+    } catch (err) {
+        console.error("Error al eliminar todos los pedidos:", err);
+        res.status(500).json({ message: "Error al eliminar pedidos" });
+    }
+});
+
+// Eliminar un pedido específico (MULTI-TENANT)
+app.delete("/orders/:id", requireAuth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const photographerId = req.photographer.id;
+
+        // Verificar que el pedido pertenece al fotógrafo
+        const { data: order } = await supabaseAdmin
+            .from("orders")
+            .select("id")
+            .eq("id", id)
+            .eq("photographer_id", photographerId)
+            .single();
+
+        if (!order) {
+            return res.status(404).json({ message: "Pedido no encontrado o no autorizado" });
+        }
+
+        // Eliminar order_items asociados primero
+        const { error: itemsError } = await supabaseAdmin.from("order_items").delete().eq("order_id", id);
+
+        if (itemsError) throw itemsError;
+
+        // Eliminar el pedido
+        const { error: orderError } = await supabaseAdmin.from("orders").delete().eq("id", id);
+
+        if (orderError) throw orderError;
+
+        res.json({ message: "Pedido eliminado exitosamente" });
+    } catch (err) {
+        console.error("Error al eliminar pedido:", err);
+        res.status(500).json({ message: "Error al eliminar pedido" });
+    }
+});
+
+app.get("/admin/stats", requireAuth, async (req, res) => {
+    try {
+        const photographerId = req.photographer.id;
+
+        // Obtener conteos filtrados por photographer_id
+        const [{ count: totalAlbums }, albumsWithPhotos, { count: totalOrders }, ordersData] = await Promise.all([
+            supabaseAdmin.from("albums").select("*", { count: "exact", head: true }).eq("photographer_id", photographerId),
+            supabaseAdmin.from("albums").select("id").eq("photographer_id", photographerId),
+            supabaseAdmin.from("orders").select("*", { count: "exact", head: true }).eq("photographer_id", photographerId),
+            supabaseAdmin.from("orders").select("total_amount, status").eq("photographer_id", photographerId),
+        ]);
+
+        // Contar fotos de todos los álbumes del fotógrafo
+        const albumIds = albumsWithPhotos.data?.map((a) => a.id) || [];
+        let totalPhotos = 0;
+        if (albumIds.length > 0) {
+            const { count } = await supabaseAdmin.from("photos").select("*", { count: "exact", head: true }).in("album_id", albumIds);
+            totalPhotos = count ?? 0;
+        }
+
+        // Calcular ventas totales (solo pedidos pagados)
+        const totalSales = ordersData.data
+            ?.filter((order) => order.status === "paid")
+            .reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+
+        res.json({
+            totalAlbums: totalAlbums ?? 0,
+            totalPhotos,
+            totalOrders: totalOrders ?? 0,
+            totalSales: totalSales.toFixed(2),
+            photographer: {
+                business_name: req.photographer.business_name,
+                plan_type: req.photographer.plan_type,
+                subscription_status: req.photographer.subscription_status,
+            },
+        });
+    } catch (err) {
+        console.error("Error al obtener estadísticas:", err);
+        res.status(500).json({ message: "Error interno al obtener estadísticas" });
+    }
+});
+
+// Obtener álbumes con sus fotos (MULTI-TENANT)
+app.get("/albums-with-photos", requireAuth, async (req, res) => {
+    try {
+        const photographerId = req.photographer.id;
+        
+        const { data: albums, error } = await supabaseAdmin
+            .from("albums")
+            .select(
+                `
+        id,
+        name,
+        event_date,
+        description,
+        price_per_photo,
+        photos!photos_album_id_fkey (
+          id,
+          watermarked_file_path
+        )
+      `
+            )
+            .eq("photographer_id", photographerId)
+            .order("event_date", { ascending: false });
+
+        if (error) throw error;
+
+        const albumsWithUrls = albums.map((a) => ({
+            ...a,
+            photos: a.photos.map((p) => ({
+                id: p.id,
+                public_watermarked_url: `${supabaseUrl}/storage/v1/object/public/watermarked-photos/${p.watermarked_file_path}`,
+            })),
+        }));
+
+        res.json(albumsWithUrls);
+    } catch (err) {
+        console.error("Error al obtener álbumes con fotos:", err);
+        res.status(500).json({ message: "Error interno al obtener álbumes" });
+    }
+});
+
+// Eliminar álbum y fotos (MULTI-TENANT)
+app.delete("/albums/:id", requireAuth, async (req, res) => {
+    const { id } = req.params;
+    const photographerId = req.photographer.id;
+    
+    try {
+        // Verificar que el álbum pertenece al fotógrafo
+        const { data: album } = await supabaseAdmin.from("albums").select("id").eq("id", id).eq("photographer_id", photographerId).single();
+        
+        if (!album) {
+            return res.status(404).json({ message: "Álbum no encontrado o no autorizado" });
+        }
+        
+        await supabaseAdmin.from("photos").delete().eq("album_id", id);
+        const { error } = await supabaseAdmin.from("albums").delete().eq("id", id).eq("photographer_id", photographerId);
+        if (error) throw error;
+        res.json({ message: "Álbum eliminado" });
+    } catch (err) {
+        console.error("Error al eliminar álbum:", err);
+        res.status(500).json({ message: "Error interno al eliminar álbum" });
+    }
+});
+
+// Eliminar foto (MULTI-TENANT)
+app.delete("/photos/:id", requireAuth, async (req, res) => {
+    const { id } = req.params;
+    const photographerId = req.photographer.id;
+    
+    try {
+        // Verificar que la foto pertenece a un álbum del fotógrafo
+        const { data: photo } = await supabaseAdmin
+            .from("photos")
+            .select("id, album_id, albums!inner(photographer_id)")
+            .eq("id", id)
+            .single();
+        
+        if (!photo || photo.albums.photographer_id !== photographerId) {
+            return res.status(404).json({ message: "Foto no encontrada o no autorizada" });
+        }
+        
+        const { error } = await supabaseAdmin.from("photos").delete().eq("id", id);
+        if (error) throw error;
+        res.json({ message: "Foto eliminada" });
+    } catch (err) {
+        console.error("Error al eliminar foto:", err);
+        res.status(500).json({ message: "Error interno al eliminar foto" });
+    }
+});
+
+// Actualizar álbum
+app.put("/albums/:id", async (req, res) => {
+    const { id } = req.params;
+    const { name, event_date, description, price_per_photo } = req.body;
+
+    try {
+        const updateData = {
+            name,
+            event_date,
+            description,
+        };
+
+        // Solo actualizar precio si se proporciona
+        if (price_per_photo !== undefined) {
+            updateData.price_per_photo = Number(price_per_photo);
+
+            // Actualizar el precio de todas las fotos existentes en este álbum
+            const { error: photosError } = await supabaseAdmin
+                .from("photos")
+                .update({ price: Number(price_per_photo) })
+                .eq("album_id", id);
+
+            if (photosError) {
+                console.error("Error al actualizar precios de fotos:", photosError);
+            } else {
+                // console.log(`✓ Precios actualizados para todas las fotos del álbum ${id}: $${price_per_photo}`);
+            }
+        }
+
+        const { data, error } = await supabaseAdmin.from("albums").update(updateData).eq("id", id).select().single();
+
+        if (error) throw error;
+
+        res.json({ success: true, album: data });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+const MAX_DESCARGAS = 3; // ajustalo como quieras
+
+app.get("/download-photo/:photoId/:orderId/:customerEmail", async (req, res) => {
+    try {
+        const { photoId, orderId, customerEmail } = req.params;
+
+        // Buscar registro de descargas
+        const { data: registro, error: errSelect } = await supabaseAdmin
+            .from("descargas")
+            .select("*")
+            .eq(ORDER_FIELD_NAME, orderId)
+            .eq("user_id", customerEmail) // ⚠️ si guardás uuid de usuario, ajustá aquí
+            .single();
+
+        if (errSelect && errSelect.code !== "PGRST116") {
+            throw errSelect;
+        }
+
+        // Si no hay registro, lo creamos
+        if (!registro) {
+            await supabaseAdmin.from("descargas").insert({
+                [ORDER_FIELD_NAME]: orderId,
+                user_id: customerEmail,
+                contador: 0,
+            });
+        } else {
+            // Chequear límite
+            if (registro.contador >= MAX_DESCARGAS) {
+                return res.status(403).send("⚠️ Límite de descargas alcanzado. Contacta a soporte.");
+            }
+        }
+
+        // Buscar foto
+        const { data: photoData, error: errPhoto } = await supabaseAdmin.from("photos").select("*").eq("id", photoId).single();
+
+        if (errPhoto || !photoData) {
+            return res.status(404).send("Foto no encontrada");
+        }
+
+        // Generar URL firmada
+        const { data: signedUrlData, error: errSigned } = await supabaseAdmin.storage
+            .from(ORIGINAL_BUCKET_NAME) // bucket privado de originales
+            .createSignedUrl(photoData.original_path, 60); // válido 60s
+
+        if (errSigned) throw errSigned;
+
+        // Incrementar contador
+        await supabaseAdmin
+            .from("descargas")
+            .update({ contador: (registro?.contador || 0) + 1 })
+            .eq(ORDER_FIELD_NAME, orderId)
+            .eq("user_id", customerEmail);
+
+        // Redirigir a la URL firmada
+        return res.redirect(signedUrlData.signedUrl);
+    } catch (err) {
+        console.error("❌ Error en download-photo:", err);
+        res.status(500).send("Error interno al generar descarga");
+    }
+});
+
+// ===== ENDPOINTS DE MONITOREO Y DEBUGGING =====
+
+// Obtener logs del buffer
+app.get("/api/monitoring/logs", (req, res) => {
+    const { level, limit = 100 } = req.query;
+
+    let logs = [...logBuffer];
+
+    // Filtrar por nivel si se especifica
+    if (level && level.toUpperCase() !== "ALL") {
+        logs = logs.filter((log) => log.level === level.toUpperCase());
+    }
+
+    // Limitar cantidad
+    logs = logs.slice(-parseInt(limit));
+
+    res.json({
+        total: logs.length,
+        logs: logs.reverse(), // Más recientes primero
+    });
+});
+
+// Limpiar logs
+app.delete("/api/monitoring/logs", (req, res) => {
+    const count = logBuffer.length;
+    logBuffer.length = 0;
+    logger.info("Logs limpiados manualmente", { count });
+    res.json({ message: `${count} logs eliminados` });
+});
+
+// Configurar nivel de log
+app.post("/api/monitoring/log-level", (req, res) => {
+    const { level } = req.body;
+
+    if (!LOG_LEVELS[level.toUpperCase()]) {
+        return res.status(400).json({ error: "Nivel inválido. Usa: DEBUG, INFO, WARN, ERROR" });
+    }
+
+    currentLogLevel = level.toUpperCase();
+    logger.info(`Nivel de log cambiado a ${currentLogLevel}`);
+
+    res.json({ level: currentLogLevel });
+});
+
+// Habilitar/deshabilitar logs en consola
+app.post("/api/monitoring/console-logging", (req, res) => {
+    const { enabled } = req.body;
+    consoleLoggingEnabled = enabled;
+    logger.info(`Console logging ${enabled ? "habilitado" : "deshabilitado"}`);
+    res.json({ consoleLoggingEnabled });
+});
+
+// Obtener métricas
+app.get("/api/monitoring/metrics", (req, res) => {
+    const uptime = Date.now() - metrics.startTime;
+    const avgResponseTime = metrics.responseTimes.length > 0 ? metrics.responseTimes.reduce((a, b) => a + b, 0) / metrics.responseTimes.length : 0;
+
+    res.json({
+        uptime: {
+            ms: uptime,
+            formatted: formatUptime(uptime),
+        },
+        requests: metrics.requests,
+        errors: metrics.errors,
+        photos: metrics.photos,
+        albums: metrics.albums,
+        orders: metrics.orders,
+        performance: {
+            avgResponseTime: Math.round(avgResponseTime),
+            minResponseTime: Math.min(...metrics.responseTimes),
+            maxResponseTime: Math.max(...metrics.responseTimes),
+        },
+        system: {
+            nodeVersion: process.version,
+            platform: process.platform,
+            memory: process.memoryUsage(),
+        },
+        config: {
+            logLevel: currentLogLevel,
+            consoleLoggingEnabled,
+        },
+    });
+});
+
+// Resetear métricas
+app.delete("/api/monitoring/metrics", (req, res) => {
+    metrics.requests = { total: 0, byEndpoint: {}, byStatusCode: {} };
+    metrics.errors = { total: 0, byType: {} };
+    metrics.photos = { uploaded: 0, downloaded: 0 };
+    metrics.albums = { created: 0 };
+    metrics.orders = { created: 0, paid: 0 };
+    metrics.responseTimes = [];
+
+    logger.info("Métricas reseteadas");
+    res.json({ message: "Métricas reseteadas" });
+});
+
+// Health check
+app.get("/api/monitoring/health", async (req, res) => {
+    const checks = {
+        server: "ok",
+        database: "checking",
+        storage: "checking",
+    };
+
+    try {
+        // Test database
+        const { error: dbError } = await supabaseAdmin.from("albums").select("id").limit(1);
+        checks.database = dbError ? "error" : "ok";
+
+        // Test storage
+        const { data: buckets, error: storageError } = await supabaseAdmin.storage.listBuckets();
+        checks.storage = storageError ? "error" : "ok";
+
+        const allOk = Object.values(checks).every((status) => status === "ok");
+
+        res.status(allOk ? 200 : 503).json({
+            status: allOk ? "healthy" : "degraded",
+            checks,
+            timestamp: new Date().toISOString(),
+        });
+    } catch (err) {
+        logger.error("Health check failed", { error: err.message });
+        res.status(503).json({
+            status: "unhealthy",
+            checks,
+            error: err.message,
+        });
+    }
+});
+
+// ===== ENDPOINTS DE TESTING =====
+
+// Test de creación de álbum
+app.post("/api/testing/create-test-album", async (req, res) => {
+    try {
+        const testAlbum = {
+            name: `Test Album ${Date.now()}`,
+            event_date: new Date().toISOString().split("T")[0],
+            description: "Álbum de prueba generado automáticamente",
+            price_per_photo: 50,
+            photographer_user_id: "65805569-2e32-46a0-97c5-c52e31e02866",
+        };
+
+        const { data, error } = await supabaseAdmin.from("albums").insert(testAlbum).select().single();
+
+        if (error) throw error;
+
+        metrics.albums.created++;
+        logger.info("Test album created", { albumId: data.id });
+
+        res.json({ success: true, album: data });
+    } catch (err) {
+        logger.error("Failed to create test album", { error: err.message });
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Limpiar datos de prueba
+app.delete("/api/testing/cleanup-test-data", async (req, res) => {
+    try {
+        // Eliminar álbumes de prueba (que contengan "Test" en el nombre)
+        const { data: testAlbums } = await supabaseAdmin.from("albums").select("id").ilike("name", "%test%");
+
+        if (testAlbums && testAlbums.length > 0) {
+            const albumIds = testAlbums.map((a) => a.id);
+
+            // Eliminar fotos de álbumes de prueba
+            await supabaseAdmin.from("photos").delete().in("album_id", albumIds);
+
+            // Eliminar álbumes
+            await supabaseAdmin.from("albums").delete().in("id", albumIds);
+        }
+
+        logger.info("Test data cleaned up", { albumsDeleted: testAlbums?.length || 0 });
+
+        res.json({
+            success: true,
+            deleted: {
+                albums: testAlbums?.length || 0,
+            },
+        });
+    } catch (err) {
+        logger.error("Failed to cleanup test data", { error: err.message });
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Simular error para testing
+app.get("/api/testing/simulate-error", (req, res) => {
+    const errorType = req.query.type || "500";
+
+    metrics.errors.total++;
+    metrics.errors.byType[errorType] = (metrics.errors.byType[errorType] || 0) + 1;
+
+    logger.error(`Simulated error: ${errorType}`);
+
+    switch (errorType) {
+        case "400":
+            res.status(400).json({ error: "Bad Request (simulado)" });
+            break;
+        case "404":
+            res.status(404).json({ error: "Not Found (simulado)" });
+            break;
+        case "500":
+        default:
+            res.status(500).json({ error: "Internal Server Error (simulado)" });
+    }
+});
+
+// Test de performance (respuesta lenta)
+app.get("/api/testing/slow-endpoint", async (req, res) => {
+    const delay = parseInt(req.query.delay) || 3000;
+    logger.warn(`Slow endpoint called with ${delay}ms delay`);
+
+    await new Promise((resolve) => setTimeout(resolve, delay));
+
+    res.json({
+        message: "Respuesta retrasada completada",
+        delay: `${delay}ms`,
+    });
+});
+
+// Función helper para formatear uptime
+function formatUptime(ms) {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ${hours % 24}h ${minutes % 60}m`;
+    if (hours > 0) return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+    return `${seconds}s`;
+}
+
+// ===== FIN DE ENDPOINTS DE MONITOREO =====

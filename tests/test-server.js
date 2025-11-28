@@ -9,11 +9,11 @@ const PORT = process.env.PORT || 8080; // Usamos un puerto diferente para no col
 // Sirve los archivos estáticos desde la carpeta 'public'
 // Esto permitirá que 'simple_payment_test.html' y otros archivos HTML/JS/CSS
 // dentro de 'public' sean accesibles directamente.
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // Ruta para la página de prueba principal
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'simple_payment_test.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'tests', 'simple_payment_test.html'));
 });
 
 // Iniciar el servidor estático

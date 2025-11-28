@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Fotógrafo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .register-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 100%;
+            max-width: 500px;
+            overflow: hidden;
+            margin: 20px auto;
+        }
+
+        .register-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .logo-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 2.5em;
+            backdrop-filter: blur(10px);
+        }
+
+        .register-header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .register-header p {
+            opacity: 0.9;
+            font-size: 1em;
+        }
+
+        .register-form {
+            padding: 40px 30px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-row .form-group {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .required {
+            color: #f00;
+            margin-left: 3px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 1.2em;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group input::placeholder,
+        .form-group textarea::placeholder {
+            color: #999;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #999;
+            user-select: none;
+            font-size: 1.2em;
+        }
+
+        .password-toggle:hover {
+            color: #667eea;
+        }
+
+        .password-strength {
+            margin-top: 5px;
+            font-size: 0.85em;
+            color: #999;
+        }
+
+        .strength-bar {
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0;
+            background: #f00;
+            transition: all 0.3s;
+        }
+
+        .strength-fill.weak { width: 33%; background: #f00; }
+        .strength-fill.medium { width: 66%; background: #fa0; }
+        .strength-fill.strong { width: 100%; background: #0a0; }
+
+        .terms-checkbox {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 25px;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .terms-checkbox input[type="checkbox"] {
+            margin-top: 3px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .terms-checkbox a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .terms-checkbox a:hover {
+            text-decoration: underline;
+        }
+
+        .register-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .register-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .register-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 25px 0;
+            color: #999;
+            position: relative;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .divider::before {
+            left: 0;
+        }
+
+        .divider::after {
+            right: 0;
+        }
+
+        .login-link {
+            text-align: center;
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .login-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .login-link a:hover {
+            text-decoration: underline;
+        }
+
+        .error-message {
+            background: #fee;
+            border: 2px solid #fcc;
+            color: #c00;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        .success-message {
+            background: #efe;
+            border: 2px solid #cfc;
+            color: #0a0;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+
+        .back-home {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-home a {
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            opacity: 0.9;
+            transition: opacity 0.3s;
+        }
+
+        .back-home a:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .form-row .form-group {
+                margin-bottom: 25px;
+            }
+
+            .register-container {
+                border-radius: 15px;
+            }
+
+            .register-header {
+                padding: 30px 20px;
+            }
+
+            .register-form {
+                padding: 30px 20px;
+                max-height: 60vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="register-header">
+            <div class="logo-icon">📸</div>
+            <h1>Regístrate</h1>
+            <p>Crea tu cuenta de fotógrafo profesional</p>
+        </div>
+
+        <form class="register-form" id="registerForm">
+            <div class="error-message" id="errorMessage"></div>
+            <div class="success-message" id="successMessage"></div>
+
+            <div class="form-group">
+                <label for="businessName">
+                    Nombre del Negocio <span class="required">*</span>
+                </label>
+                <div class="input-wrapper">
+                    <span class="input-icon">🏢</span>
+                    <input 
+                        type="text" 
+                        id="businessName" 
+                        name="businessName" 
+                        placeholder="Ej: Fotografía Profesional Juan Pérez" 
+                        required
+                        maxlength="100"
+                    >
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="firstName">
+                        Nombre <span class="required">*</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">👤</span>
+                        <input 
+                            type="text" 
+                            id="firstName" 
+                            name="firstName" 
+                            placeholder="Tu nombre" 
+                            required
+                            maxlength="50"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="lastName">
+                        Apellido <span class="required">*</span>
+                    </label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">👤</span>
+                        <input 
+                            type="text" 
+                            id="lastName" 
+                            name="lastName" 
+                            placeholder="Tu apellido" 
+                            required
+                            maxlength="50"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="email">
+                    Email <span class="required">*</span>
+                </label>
+                <div class="input-wrapper">
+                    <span class="input-icon">✉️</span>
+                    <input 
+                        type="email" 
+                        id="email" 
+                        name="email" 
+                        placeholder="tu@email.com" 
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="phone">Teléfono</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">📱</span>
+                        <input 
+                            type="tel" 
+                            id="phone" 
+                            name="phone" 
+                            placeholder="+54 9 11 1234-5678"
+                            maxlength="20"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="whatsapp">WhatsApp</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon">💬</span>
+                        <input 
+                            type="tel" 
+                            id="whatsapp" 
+                            name="whatsapp" 
+                            placeholder="+54 9 11 1234-5678"
+                            maxlength="20"
+                        >
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">
+                    Contraseña <span class="required">*</span>
+                </label>
+                <div class="input-wrapper">
+                    <span class="input-icon">🔒</span>
+                    <input 
+                        type="password" 
+                        id="password" 
+                        name="password" 
+                        placeholder="Mínimo 8 caracteres" 
+                        required
+                        minlength="8"
+                        autocomplete="new-password"
+                    >
+                    <span class="password-toggle" onclick="togglePassword('password')">👁️</span>
+                </div>
+                <div class="strength-bar">
+                    <div class="strength-fill" id="strengthFill"></div>
+                </div>
+                <div class="password-strength" id="strengthText"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">
+                    Confirmar Contraseña <span class="required">*</span>
+                </label>
+                <div class="input-wrapper">
+                    <span class="input-icon">🔒</span>
+                    <input 
+                        type="password" 
+                        id="confirmPassword" 
+                        name="confirmPassword" 
+                        placeholder="Repite tu contraseña" 
+                        required
+                        minlength="8"
+                        autocomplete="new-password"
+                    >
+                    <span class="password-toggle" onclick="togglePassword('confirmPassword')">👁️</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="bio">Biografía (Opcional)</label>
+                <div class="input-wrapper">
+                    <span class="input-icon" style="top: 20px; transform: none;">📝</span>
+                    <textarea 
+                        id="bio" 
+                        name="bio" 
+                        placeholder="Cuéntanos sobre tu experiencia y especialidades..."
+                        maxlength="500"
+                        style="padding-left: 45px;"
+                    ></textarea>
+                </div>
+            </div>
+
+            <div class="terms-checkbox">
+                <input type="checkbox" id="terms" name="terms" required>
+                <label for="terms">
+                    Acepto los <a href="#">Términos y Condiciones</a> y la 
+                    <a href="#">Política de Privacidad</a>
+                </label>
+            </div>
+
+            <button type="submit" class="register-btn" id="registerBtn">
+                Crear Cuenta
+            </button>
+
+            <div class="divider">o</div>
+
+            <div class="login-link">
+                ¿Ya tienes cuenta? <a href="/photographer-login.html">Inicia sesión aquí</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="back-home">
+        <a href="/">← Volver al inicio</a>
+    </div>
+
+    <script>
+        const BACKEND_URL = window.BACKEND_URL || 'http://localhost:3000';
+
+        // Toggle password visibility
+        function togglePassword(fieldId) {
+            const passwordInput = document.getElementById(fieldId);
+            const toggle = passwordInput.parentElement.querySelector('.password-toggle');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggle.textContent = '🙈';
+            } else {
+                passwordInput.type = 'password';
+                toggle.textContent = '👁️';
+            }
+        }
+
+        // Check password strength
+        document.getElementById('password').addEventListener('input', (e) => {
+            const password = e.target.value;
+            const strengthFill = document.getElementById('strengthFill');
+            const strengthText = document.getElementById('strengthText');
+
+            let strength = 0;
+            if (password.length >= 8) strength++;
+            if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++;
+            if (password.match(/\d/)) strength++;
+            if (password.match(/[^a-zA-Z\d]/)) strength++;
+
+            strengthFill.className = 'strength-fill';
+            
+            if (strength === 0 || strength === 1) {
+                strengthFill.classList.add('weak');
+                strengthText.textContent = 'Contraseña débil';
+                strengthText.style.color = '#f00';
+            } else if (strength === 2 || strength === 3) {
+                strengthFill.classList.add('medium');
+                strengthText.textContent = 'Contraseña media';
+                strengthText.style.color = '#fa0';
+            } else {
+                strengthFill.classList.add('strong');
+                strengthText.textContent = 'Contraseña fuerte';
+                strengthText.style.color = '#0a0';
+            }
+        });
+
+        // Show error message
+        function showError(message) {
+            const errorEl = document.getElementById('errorMessage');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+            
+            setTimeout(() => {
+                errorEl.classList.remove('show');
+            }, 5000);
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            const successEl = document.getElementById('successMessage');
+            successEl.textContent = message;
+            successEl.classList.add('show');
+        }
+
+        // Handle register form submission
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = {
+                business_name: document.getElementById('businessName').value.trim(),
+                first_name: document.getElementById('firstName').value.trim(),
+                last_name: document.getElementById('lastName').value.trim(),
+                email: document.getElementById('email').value.trim().toLowerCase(),
+                phone: document.getElementById('phone').value.trim() || null,
+                whatsapp: document.getElementById('whatsapp').value.trim() || null,
+                password: document.getElementById('password').value,
+                bio: document.getElementById('bio').value.trim() || null
+            };
+
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const termsAccepted = document.getElementById('terms').checked;
+
+            // Validaciones
+            if (!termsAccepted) {
+                showError('Debes aceptar los términos y condiciones.');
+                return;
+            }
+
+            if (formData.password !== confirmPassword) {
+                showError('Las contraseñas no coinciden.');
+                return;
+            }
+
+            if (formData.password.length < 8) {
+                showError('La contraseña debe tener al menos 8 caracteres.');
+                return;
+            }
+
+            const registerBtn = document.getElementById('registerBtn');
+            registerBtn.disabled = true;
+            registerBtn.textContent = 'Creando cuenta...';
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    showSuccess('¡Cuenta creada exitosamente! Redirigiendo al login...');
+                    
+                    // Limpiar formulario
+                    document.getElementById('registerForm').reset();
+
+                    // Redirigir al login después de 2 segundos
+                    setTimeout(() => {
+                        window.location.href = '/photographer-login.html';
+                    }, 2000);
+
+                } else {
+                    showError(data.message || 'Error al crear la cuenta. Intenta nuevamente.');
+                    registerBtn.disabled = false;
+                    registerBtn.textContent = 'Crear Cuenta';
+                }
+
+            } catch (error) {
+                console.error('Error al registrarse:', error);
+                showError('Error de conexión. Por favor, intenta nuevamente.');
+                registerBtn.disabled = false;
+                registerBtn.textContent = 'Crear Cuenta';
+            }
+        });
+
+        // Check if already logged in
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('photographer_token') || 
+                         sessionStorage.getItem('photographer_token');
+            
+            if (token) {
+                // Ya está logueado, redirigir al dashboard
+                window.location.href = '/admin/admin_dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html>
