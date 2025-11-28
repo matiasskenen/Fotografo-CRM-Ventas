@@ -3,588 +3,287 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Fotógrafo</title>
+    <title>SchoolSnap - Registro de Fotógrafos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .register-container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            width: 100%;
-            max-width: 500px;
-            overflow: hidden;
-            margin: 20px auto;
-        }
-
-        .register-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 40px 30px;
-            text-align: center;
-        }
-
-        .logo-icon {
-            width: 80px;
-            height: 80px;
-            background: rgba(255,255,255,0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            font-size: 2.5em;
-            backdrop-filter: blur(10px);
-        }
-
-        .register-header h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-
-        .register-header p {
-            opacity: 0.9;
-            font-size: 1em;
-        }
-
-        .register-form {
-            padding: 40px 30px;
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        .form-group {
-            margin-bottom: 25px;
-        }
-
-        .form-row .form-group {
-            margin-bottom: 0;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #333;
-            font-weight: 600;
-            font-size: 0.95em;
-        }
-
-        .required {
-            color: #f00;
-            margin-left: 3px;
-        }
-
-        .input-wrapper {
-            position: relative;
-        }
-
-        .input-icon {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #999;
-            font-size: 1.2em;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            width: 100%;
-            padding: 15px 15px 15px 45px;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            font-size: 1em;
-            transition: all 0.3s;
-            font-family: inherit;
-        }
-
-        .form-group textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .form-group input::placeholder,
-        .form-group textarea::placeholder {
-            color: #999;
-        }
-
-        .password-toggle {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            color: #999;
-            user-select: none;
-            font-size: 1.2em;
-        }
-
-        .password-toggle:hover {
-            color: #667eea;
-        }
-
-        .password-strength {
-            margin-top: 5px;
-            font-size: 0.85em;
-            color: #999;
-        }
-
-        .strength-bar {
-            height: 4px;
-            background: #e0e0e0;
-            border-radius: 2px;
-            margin-top: 5px;
-            overflow: hidden;
-        }
-
-        .strength-fill {
-            height: 100%;
-            width: 0;
-            background: #f00;
-            transition: all 0.3s;
-        }
-
-        .strength-fill.weak { width: 33%; background: #f00; }
-        .strength-fill.medium { width: 66%; background: #fa0; }
-        .strength-fill.strong { width: 100%; background: #0a0; }
-
-        .terms-checkbox {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            margin-bottom: 25px;
-            font-size: 0.9em;
-            color: #666;
-        }
-
-        .terms-checkbox input[type="checkbox"] {
-            margin-top: 3px;
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-
-        .terms-checkbox a {
-            color: #667eea;
-            text-decoration: none;
-        }
-
-        .terms-checkbox a:hover {
-            text-decoration: underline;
-        }
-
-        .register-btn {
-            width: 100%;
-            padding: 15px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 1.1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 20px;
-        }
-
-        .register-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        .register-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .divider {
-            text-align: center;
-            margin: 25px 0;
-            color: #999;
-            position: relative;
-        }
-
-        .divider::before,
-        .divider::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 40%;
-            height: 1px;
-            background: #e0e0e0;
-        }
-
-        .divider::before {
-            left: 0;
-        }
-
-        .divider::after {
-            right: 0;
-        }
-
-        .login-link {
-            text-align: center;
-            color: #666;
-            font-size: 0.95em;
-        }
-
-        .login-link a {
-            color: #667eea;
-            text-decoration: none;
-            font-weight: 600;
-        }
-
-        .login-link a:hover {
-            text-decoration: underline;
-        }
-
-        .error-message {
-            background: #fee;
-            border: 2px solid #fcc;
-            color: #c00;
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9em;
-            display: none;
-        }
-
-        .error-message.show {
-            display: block;
-        }
-
-        .success-message {
-            background: #efe;
-            border: 2px solid #cfc;
-            color: #0a0;
-            padding: 12px 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 0.9em;
-            display: none;
-        }
-
-        .success-message.show {
-            display: block;
-        }
-
-        .back-home {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .back-home a {
-            color: white;
-            text-decoration: none;
-            font-weight: 600;
-            opacity: 0.9;
-            transition: opacity 0.3s;
-        }
-
-        .back-home a:hover {
-            opacity: 1;
-            text-decoration: underline;
-        }
-
-        @media (max-width: 768px) {
-            .form-row {
-                grid-template-columns: 1fr;
-                gap: 0;
-            }
-
-            .form-row .form-group {
-                margin-bottom: 25px;
-            }
-
-            .register-container {
-                border-radius: 15px;
-            }
-
-            .register-header {
-                padding: 30px 20px;
-            }
-
-            .register-form {
-                padding: 30px 20px;
-                max-height: 60vh;
-            }
+            font-family: 'Inter', sans-serif;
         }
     </style>
 </head>
-<body>
-    <div class="register-container">
-        <div class="register-header">
-            <div class="logo-icon">📸</div>
-            <h1>Regístrate</h1>
-            <p>Crea tu cuenta de fotógrafo profesional</p>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Minimal Navbar -->
+    <nav class="w-full bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <a href="/" class="flex items-center gap-2">
+                    <div class="bg-blue-600 p-1.5 rounded-lg text-white">
+                        <i data-lucide="camera" class="w-4 h-4"></i>
+                    </div>
+                    <span class="font-bold text-lg tracking-tight text-slate-900">SchoolSnap</span>
+                </a>
+                
+                <a href="/photographer-login.html" class="text-sm font-medium text-slate-500 hover:text-blue-600 transition">
+                    ¿Ya tenés cuenta? Ingresá
+                </a>
+            </div>
         </div>
+    </nav>
 
-        <form class="register-form" id="registerForm">
-            <div class="error-message" id="errorMessage"></div>
-            <div class="success-message" id="successMessage"></div>
-
-            <div class="form-group">
-                <label for="businessName">
-                    Nombre del Negocio <span class="required">*</span>
-                </label>
-                <div class="input-wrapper">
-                    <span class="input-icon">🏢</span>
-                    <input 
-                        type="text" 
-                        id="businessName" 
-                        name="businessName" 
-                        placeholder="Ej: Fotografía Profesional Juan Pérez" 
-                        required
-                        maxlength="100"
-                    >
+    <!-- Main Content: Register Split -->
+    <main class="flex-grow flex items-center justify-center p-4 sm:p-8">
+        <div class="w-full max-w-5xl bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden flex flex-col md:flex-row min-h-[600px]">
+            
+            <!-- Left Side: Register Form -->
+            <div class="w-full md:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center overflow-y-auto max-h-[700px]">
+                <div class="mb-6">
+                    <h1 class="text-3xl font-bold text-slate-900 mb-2">Crear cuenta</h1>
+                    <p class="text-slate-500">Comenzá a vender tus fotos escolares en minutos.</p>
                 </div>
-            </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="firstName">
-                        Nombre <span class="required">*</span>
-                    </label>
-                    <div class="input-wrapper">
-                        <span class="input-icon">👤</span>
+                <!-- Error/Success Messages -->
+                <div id="errorMessage" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm"></div>
+                <div id="successMessage" class="hidden mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm"></div>
+
+                <form id="registerForm" class="space-y-4">
+                    <!-- Business Name -->
+                    <div>
+                        <label for="business-name" class="block text-sm font-medium text-slate-700 mb-1.5">Nombre del Negocio</label>
                         <input 
                             type="text" 
-                            id="firstName" 
-                            name="firstName" 
-                            placeholder="Tu nombre" 
+                            id="business-name" 
+                            name="business-name" 
                             required
-                            maxlength="50"
+                            maxlength="100"
+                            class="block w-full px-3 py-3 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition" 
+                            placeholder="Ej: Fotografía Escolar Pérez"
                         >
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label for="lastName">
-                        Apellido <span class="required">*</span>
-                    </label>
-                    <div class="input-wrapper">
-                        <span class="input-icon">👤</span>
-                        <input 
-                            type="text" 
-                            id="lastName" 
-                            name="lastName" 
-                            placeholder="Tu apellido" 
-                            required
-                            maxlength="50"
-                        >
+                    <!-- Name Input -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="first-name" class="block text-sm font-medium text-slate-700 mb-1.5">Nombre</label>
+                            <input 
+                                type="text" 
+                                id="first-name" 
+                                name="first-name" 
+                                required
+                                maxlength="50"
+                                class="block w-full px-3 py-3 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition" 
+                                placeholder="Juan"
+                            >
+                        </div>
+                        <div>
+                            <label for="last-name" class="block text-sm font-medium text-slate-700 mb-1.5">Apellido</label>
+                            <input 
+                                type="text" 
+                                id="last-name" 
+                                name="last-name" 
+                                required
+                                maxlength="50"
+                                class="block w-full px-3 py-3 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition" 
+                                placeholder="Pérez"
+                            >
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <div class="form-group">
-                <label for="email">
-                    Email <span class="required">*</span>
-                </label>
-                <div class="input-wrapper">
-                    <span class="input-icon">✉️</span>
-                    <input 
-                        type="email" 
-                        id="email" 
-                        name="email" 
-                        placeholder="tu@email.com" 
-                        required
-                        autocomplete="email"
+                    <!-- Email Input -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-slate-700 mb-1.5">Correo electrónico</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="mail" class="w-5 h-5"></i>
+                            </div>
+                            <input 
+                                type="email" 
+                                id="email" 
+                                name="email" 
+                                required
+                                autocomplete="email"
+                                class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition" 
+                                placeholder="nombre@ejemplo.com"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Phone & WhatsApp -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="phone" class="block text-sm font-medium text-slate-700 mb-1.5">Teléfono</label>
+                            <input 
+                                type="tel" 
+                                id="phone" 
+                                name="phone"
+                                maxlength="20"
+                                class="block w-full px-3 py-3 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition" 
+                                placeholder="+54 11 1234-5678"
+                            >
+                        </div>
+                        <div>
+                            <label for="whatsapp" class="block text-sm font-medium text-slate-700 mb-1.5">WhatsApp</label>
+                            <input 
+                                type="tel" 
+                                id="whatsapp" 
+                                name="whatsapp"
+                                maxlength="20"
+                                class="block w-full px-3 py-3 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition" 
+                                placeholder="+54 9 11 1234-5678"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Password Input -->
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-slate-700 mb-1.5">Contraseña</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="lock" class="w-5 h-5"></i>
+                            </div>
+                            <input 
+                                type="password" 
+                                id="password" 
+                                name="password" 
+                                required
+                                minlength="8"
+                                autocomplete="new-password"
+                                class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition" 
+                                placeholder="••••••••"
+                            >
+                        </div>
+                        <p class="mt-1 text-xs text-slate-500">Mínimo 8 caracteres</p>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div>
+                        <label for="confirm-password" class="block text-sm font-medium text-slate-700 mb-1.5">Confirmar Contraseña</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="lock" class="w-5 h-5"></i>
+                            </div>
+                            <input 
+                                type="password" 
+                                id="confirm-password" 
+                                name="confirm-password" 
+                                required
+                                minlength="8"
+                                autocomplete="new-password"
+                                class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition" 
+                                placeholder="••••••••"
+                            >
+                        </div>
+                    </div>
+
+                    <!-- Terms Checkbox -->
+                    <div class="flex items-start">
+                        <div class="flex items-center h-5">
+                            <input 
+                                id="terms" 
+                                name="terms" 
+                                type="checkbox" 
+                                required
+                                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            >
+                        </div>
+                        <div class="ml-2 text-sm">
+                            <label for="terms" class="font-medium text-slate-600">
+                                Acepto los <a href="#" class="text-blue-600 hover:text-blue-500">Términos y Condiciones</a> y la <a href="#" class="text-blue-600 hover:text-blue-500">Política de Privacidad</a>.
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button 
+                        type="submit" 
+                        id="registerBtn"
+                        class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition shadow-blue-600/20 mt-2"
                     >
-                </div>
+                        Registrarme Gratis
+                    </button>
+                </form>
+
+                <p class="mt-6 text-center text-sm text-slate-600">
+                    ¿Ya tenés una cuenta?
+                    <a href="/photographer-login.html" class="font-medium text-blue-600 hover:text-blue-500">Iniciá sesión aquí</a>
+                </p>
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="phone">Teléfono</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon">📱</span>
-                        <input 
-                            type="tel" 
-                            id="phone" 
-                            name="phone" 
-                            placeholder="+54 9 11 1234-5678"
-                            maxlength="20"
-                        >
+            <!-- Right Side: Decorative Image/Panel -->
+            <div class="hidden md:block w-1/2 bg-slate-900 relative overflow-hidden">
+                <!-- Abstract Shapes/Gradient - Darker theme for contrast with login page -->
+                <div class="absolute inset-0 bg-gradient-to-br from-slate-800 to-slate-950"></div>
+                
+                <!-- Decorative Elements -->
+                <div class="absolute top-12 right-12 w-32 h-32 rounded-full border-4 border-white/10 opacity-50"></div>
+                <div class="absolute bottom-24 left-24 w-16 h-16 rounded-full bg-blue-500/50 blur-xl"></div>
+                
+                <!-- Pattern Overlay -->
+                <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#ffffff 1px, transparent 1px); background-size: 32px 32px;"></div>
+
+                <!-- Content Overlay -->
+                <div class="relative h-full flex flex-col justify-center items-center text-white p-12 text-center z-10">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="bg-blue-600/20 backdrop-blur-md p-4 rounded-xl border border-blue-500/30">
+                            <i data-lucide="upload-cloud" class="w-8 h-8 text-blue-400"></i>
+                        </div>
+                        <div class="h-px w-8 bg-blue-500/30"></div>
+                        <div class="bg-blue-600/20 backdrop-blur-md p-4 rounded-xl border border-blue-500/30">
+                            <i data-lucide="dollar-sign" class="w-8 h-8 text-green-400"></i>
+                        </div>
                     </div>
-                </div>
 
-                <div class="form-group">
-                    <label for="whatsapp">WhatsApp</label>
-                    <div class="input-wrapper">
-                        <span class="input-icon">💬</span>
-                        <input 
-                            type="tel" 
-                            id="whatsapp" 
-                            name="whatsapp" 
-                            placeholder="+54 9 11 1234-5678"
-                            maxlength="20"
-                        >
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="password">
-                    Contraseña <span class="required">*</span>
-                </label>
-                <div class="input-wrapper">
-                    <span class="input-icon">🔒</span>
-                    <input 
-                        type="password" 
-                        id="password" 
-                        name="password" 
-                        placeholder="Mínimo 8 caracteres" 
-                        required
-                        minlength="8"
-                        autocomplete="new-password"
-                    >
-                    <span class="password-toggle" onclick="togglePassword('password')">👁️</span>
-                </div>
-                <div class="strength-bar">
-                    <div class="strength-fill" id="strengthFill"></div>
-                </div>
-                <div class="password-strength" id="strengthText"></div>
-            </div>
-
-            <div class="form-group">
-                <label for="confirmPassword">
-                    Confirmar Contraseña <span class="required">*</span>
-                </label>
-                <div class="input-wrapper">
-                    <span class="input-icon">🔒</span>
-                    <input 
-                        type="password" 
-                        id="confirmPassword" 
-                        name="confirmPassword" 
-                        placeholder="Repite tu contraseña" 
-                        required
-                        minlength="8"
-                        autocomplete="new-password"
-                    >
-                    <span class="password-toggle" onclick="togglePassword('confirmPassword')">👁️</span>
+                    <h2 class="text-3xl font-bold mb-4">Potenciá tu negocio fotográfico</h2>
+                    <ul class="text-left space-y-4 text-slate-300 text-sm max-w-sm mx-auto">
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-blue-500 shrink-0 mt-0.5"></i>
+                            <span>Galerías privadas con códigos de acceso únicos por alumno.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-blue-500 shrink-0 mt-0.5"></i>
+                            <span>Sistema de pagos integrado y automatizado.</span>
+                        </li>
+                        <li class="flex items-start gap-3">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-blue-500 shrink-0 mt-0.5"></i>
+                            <span>Entregas digitales instantáneas en alta resolución.</span>
+                        </li>
+                    </ul>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="bio">Biografía (Opcional)</label>
-                <div class="input-wrapper">
-                    <span class="input-icon" style="top: 20px; transform: none;">📝</span>
-                    <textarea 
-                        id="bio" 
-                        name="bio" 
-                        placeholder="Cuéntanos sobre tu experiencia y especialidades..."
-                        maxlength="500"
-                        style="padding-left: 45px;"
-                    ></textarea>
-                </div>
-            </div>
+        </div>
+    </main>
 
-            <div class="terms-checkbox">
-                <input type="checkbox" id="terms" name="terms" required>
-                <label for="terms">
-                    Acepto los <a href="#">Términos y Condiciones</a> y la 
-                    <a href="#">Política de Privacidad</a>
-                </label>
-            </div>
+    <!-- Simple Footer -->
+    <footer class="py-6 border-t border-gray-200 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-400">
+            <p>&copy; 2025 SchoolSnap. Plataforma segura para gestión de fotografía escolar.</p>
+        </div>
+    </footer>
 
-            <button type="submit" class="register-btn" id="registerBtn">
-                Crear Cuenta
-            </button>
+    <!-- Init Icons -->
+    <script>
+        lucide.createIcons();
+    </script>
 
-            <div class="divider">o</div>
-
-            <div class="login-link">
-                ¿Ya tienes cuenta? <a href="/photographer-login.html">Inicia sesión aquí</a>
-            </div>
-        </form>
-    </div>
-
-    <div class="back-home">
-        <a href="/">← Volver al inicio</a>
-    </div>
-
+    <!-- Register Functionality -->
     <script>
         const BACKEND_URL = window.BACKEND_URL || 'http://localhost:3000';
-
-        // Toggle password visibility
-        function togglePassword(fieldId) {
-            const passwordInput = document.getElementById(fieldId);
-            const toggle = passwordInput.parentElement.querySelector('.password-toggle');
-            
-            if (passwordInput.type === 'password') {
-                passwordInput.type = 'text';
-                toggle.textContent = '🙈';
-            } else {
-                passwordInput.type = 'password';
-                toggle.textContent = '👁️';
-            }
-        }
-
-        // Check password strength
-        document.getElementById('password').addEventListener('input', (e) => {
-            const password = e.target.value;
-            const strengthFill = document.getElementById('strengthFill');
-            const strengthText = document.getElementById('strengthText');
-
-            let strength = 0;
-            if (password.length >= 8) strength++;
-            if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++;
-            if (password.match(/\d/)) strength++;
-            if (password.match(/[^a-zA-Z\d]/)) strength++;
-
-            strengthFill.className = 'strength-fill';
-            
-            if (strength === 0 || strength === 1) {
-                strengthFill.classList.add('weak');
-                strengthText.textContent = 'Contraseña débil';
-                strengthText.style.color = '#f00';
-            } else if (strength === 2 || strength === 3) {
-                strengthFill.classList.add('medium');
-                strengthText.textContent = 'Contraseña media';
-                strengthText.style.color = '#fa0';
-            } else {
-                strengthFill.classList.add('strong');
-                strengthText.textContent = 'Contraseña fuerte';
-                strengthText.style.color = '#0a0';
-            }
-        });
 
         // Show error message
         function showError(message) {
             const errorEl = document.getElementById('errorMessage');
             errorEl.textContent = message;
-            errorEl.classList.add('show');
+            errorEl.classList.remove('hidden');
             
             setTimeout(() => {
-                errorEl.classList.remove('show');
+                errorEl.classList.add('hidden');
             }, 5000);
         }
 
@@ -592,7 +291,7 @@
         function showSuccess(message) {
             const successEl = document.getElementById('successMessage');
             successEl.textContent = message;
-            successEl.classList.add('show');
+            successEl.classList.remove('hidden');
         }
 
         // Handle register form submission
@@ -600,17 +299,17 @@
             e.preventDefault();
 
             const formData = {
-                business_name: document.getElementById('businessName').value.trim(),
-                first_name: document.getElementById('firstName').value.trim(),
-                last_name: document.getElementById('lastName').value.trim(),
+                business_name: document.getElementById('business-name').value.trim(),
+                first_name: document.getElementById('first-name').value.trim(),
+                last_name: document.getElementById('last-name').value.trim(),
                 email: document.getElementById('email').value.trim().toLowerCase(),
                 phone: document.getElementById('phone').value.trim() || null,
                 whatsapp: document.getElementById('whatsapp').value.trim() || null,
                 password: document.getElementById('password').value,
-                bio: document.getElementById('bio').value.trim() || null
+                bio: null
             };
 
-            const confirmPassword = document.getElementById('confirmPassword').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
             const termsAccepted = document.getElementById('terms').checked;
 
             // Validaciones
@@ -658,14 +357,14 @@
                 } else {
                     showError(data.message || 'Error al crear la cuenta. Intenta nuevamente.');
                     registerBtn.disabled = false;
-                    registerBtn.textContent = 'Crear Cuenta';
+                    registerBtn.textContent = 'Registrarme Gratis';
                 }
 
             } catch (error) {
                 console.error('Error al registrarse:', error);
                 showError('Error de conexión. Por favor, intenta nuevamente.');
                 registerBtn.disabled = false;
-                registerBtn.textContent = 'Crear Cuenta';
+                registerBtn.textContent = 'Registrarme Gratis';
             }
         });
 

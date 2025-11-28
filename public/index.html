@@ -36,10 +36,11 @@
 
                 <!-- Desktop Menu -->
                 <div class="hidden md:flex items-center space-x-8">
-                    <a href="#" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Cómo funciona</a>
-                    <a href="#" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Para Escuelas</a>
-                    <a href="#" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Precios</a>
-                    <button class="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm">
+                    <a href="#como-funciona" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Cómo funciona</a>
+                    <a href="#para-profesionales" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Para Escuelas</a>
+                    <a href="#precios" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Precios</a>
+                    <a href="/photographer-login.html" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition">Login Fotógrafo</a>
+                    <button onclick="showCodeModal()" class="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-sm">
                         Ingresar con código
                     </button>
                 </div>
@@ -59,12 +60,12 @@
                     </h1>
                     
                     <div class="flex flex-col sm:flex-row gap-4 mt-8">
-                        <button class="bg-blue-600 text-white px-6 py-3.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-md text-center">
+                        <button onclick="showCodeModal()" class="bg-blue-600 text-white px-6 py-3.5 rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-md text-center">
                             Tengo un código de foto
                         </button>
-                        <button class="bg-white text-slate-700 border border-slate-200 px-6 py-3.5 rounded-lg text-sm font-semibold hover:bg-slate-50 transition shadow-sm text-center">
+                        <a href="/photographer-register.html" class="bg-white text-slate-700 border border-slate-200 px-6 py-3.5 rounded-lg text-sm font-semibold hover:bg-slate-50 transition shadow-sm text-center">
                             Soy Escuela o Fotógrafo
-                        </button>
+                        </a>
                     </div>
                 </div>
 
@@ -79,7 +80,7 @@
     </section>
 
     <!-- Cómo Funciona -->
-    <section class="py-20 bg-white">
+    <section id="como-funciona" class="py-20 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16">
                 <h2 class="text-3xl font-bold text-slate-900">Cómo funciona</h2>
@@ -127,7 +128,7 @@
     </section>
 
     <!-- Para Instituciones y Profesionales -->
-    <section class="py-20 bg-slate-50">
+    <section id="para-profesionales" class="py-20 bg-slate-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 class="text-3xl font-bold text-slate-900 text-center mb-12">Para Instituciones y Profesionales</h2>
 
@@ -176,7 +177,7 @@
     </section>
 
     <!-- Pricing -->
-    <section class="py-20 bg-white">
+    <section id="precios" class="py-20 bg-white">
         <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 class="text-3xl font-bold text-slate-900 text-center mb-12">Precios</h2>
             
@@ -207,7 +208,7 @@
                     <p class="text-xs text-center text-slate-500 mb-8 leading-relaxed">
                         Por conocer sin un compromiso mantienen el precio para web esenciales.
                     </p>
-                    <button class="w-full py-3 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition shadow-md">
+                    <button onclick="showCodeModal()" class="w-full py-3 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition shadow-md">
                         Ingresar con código
                     </button>
                 </div>
@@ -222,7 +223,7 @@
                     <p class="text-xs text-center text-slate-500 mb-8 leading-relaxed">
                         Por servicios completos, subida ilimitada y descargas escolares.
                     </p>
-                    <button class="w-full py-3 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition shadow-md">
+                    <button onclick="showCodeModal()" class="w-full py-3 rounded-lg bg-blue-600 text-white font-semibold text-sm hover:bg-blue-700 transition shadow-md">
                         Ingresar con código
                     </button>
                 </div>
@@ -247,9 +248,91 @@
         </div>
     </footer>
 
+    <!-- Code Modal -->
+    <div id="codeModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
+            <button onclick="hideCodeModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+            
+            <div class="text-center mb-6">
+                <div class="bg-blue-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <i data-lucide="key" class="w-8 h-8 text-blue-600"></i>
+                </div>
+                <h3 class="text-2xl font-bold text-slate-900 mb-2">Ingresá tu código</h3>
+                <p class="text-slate-600 text-sm">Recibiste un código único para ver tus fotos</p>
+            </div>
+
+            <form id="modalCodeForm" class="space-y-4">
+                <div>
+                    <label for="modalAlbumId" class="block text-sm font-medium text-slate-700 mb-2">ID del Álbum</label>
+                    <input 
+                        type="text" 
+                        id="modalAlbumId"
+                        placeholder="Ej: abc-123-def-456"
+                        class="w-full border border-slate-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-700"
+                    >
+                    <p class="text-xs text-slate-500 mt-1">Este ID viene en tu mensaje/email</p>
+                </div>
+
+                <button 
+                    type="submit"
+                    class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md"
+                >
+                    Continuar
+                </button>
+            </form>
+
+            <div class="mt-6 pt-6 border-t border-slate-200 text-center">
+                <p class="text-sm text-slate-600 mb-3">¿No tenés tu código?</p>
+                <a href="/photographer-login.html" class="text-blue-600 hover:text-blue-700 font-medium text-sm">
+                    Soy fotógrafo - Iniciar sesión
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- Init Icons -->
     <script>
         lucide.createIcons();
+
+        // Code Modal Functions
+        function showCodeModal() {
+            document.getElementById('codeModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function hideCodeModal() {
+            document.getElementById('codeModal').classList.add('hidden');
+        }
+
+        // Handle modal form submission
+        document.getElementById('modalCodeForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const albumId = document.getElementById('modalAlbumId').value.trim();
+            
+            if (!albumId) {
+                alert('Por favor ingresa el ID del álbum');
+                return;
+            }
+
+            // Redirect to album access page
+            window.location.href = `/album-access.html?albumId=${albumId}`;
+        });
+
+        // Close modal on background click
+        document.getElementById('codeModal').addEventListener('click', (e) => {
+            if (e.target.id === 'codeModal') {
+                hideCodeModal();
+            }
+        });
+
+        // Close modal on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hideCodeModal();
+            }
+        });
     </script>
 </body>
 </html>

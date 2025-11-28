@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test Suite - Fotografo Server</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+            padding: 40px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .server-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 20px;
+            margin-top: 20px;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .category {
+            margin-bottom: 40px;
+        }
+
+        .category-title {
+            color: white;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-left: 10px;
+            border-left: 5px solid white;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        .card-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        .card-title {
+            font-size: 1.3em;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .card-description {
+            color: #666;
+            line-height: 1.5;
+            font-size: 0.95em;
+        }
+
+        .card-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+
+        .card-badge.new {
+            background: #10b981;
+        }
+
+        .card-badge.test {
+            background: #f59e0b;
+        }
+
+        footer {
+            text-align: center;
+            color: white;
+            padding: 30px;
+            margin-top: 40px;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🧪 Test Suite</h1>
+            <p class="subtitle">Navegación de todas las páginas del proyecto</p>
+            <div class="server-status">
+                <span class="status-dot"></span>
+                <span>Servidor en localhost:3000</span>
+            </div>
+        </header>
+
+        <main>
+            <!-- AUTENTICACIÓN -->
+            <div class="category">
+                <h2 class="category-title">🔐 Autenticación de Fotógrafos</h2>
+                <div class="cards-grid">
+                    <a href="/photographer-login.html" class="card" target="_blank">
+                        <div class="card-icon">🔑</div>
+                        <div class="card-title">Login Fotógrafo</div>
+                        <div class="card-description">Inicio de sesión para fotógrafos profesionales</div>
+                        <span class="card-badge new">Nuevo</span>
+                    </a>
+                    <a href="/photographer-register.html" class="card" target="_blank">
+                        <div class="card-icon">📝</div>
+                        <div class="card-title">Registro Fotógrafo</div>
+                        <div class="card-description">Crear cuenta de fotógrafo con perfil completo</div>
+                        <span class="card-badge new">Nuevo</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- FLUJO CLIENTE -->
+            <div class="category">
+                <h2 class="category-title">👤 Flujo del Cliente</h2>
+                <div class="cards-grid">
+                    <a href="/index.html" class="card" target="_blank">
+                        <div class="card-icon">🏠</div>
+                        <div class="card-title">Catálogo Principal</div>
+                        <div class="card-description">Vista pública de fotógrafos y álbumes disponibles</div>
+                    </a>
+                    <a href="/album-access.html?albumId=test-uuid" class="card" target="_blank">
+                        <div class="card-icon">🔐</div>
+                        <div class="card-title">Código de Acceso</div>
+                        <div class="card-description">Página para ingresar código y acceder al álbum</div>
+                        <span class="card-badge new">Nuevo</span>
+                    </a>
+                    <a href="/tests/gallery-viewer.html?albumId=test-uuid" class="card" target="_blank">
+                        <div class="card-icon">🖼️</div>
+                        <div class="card-title">Galería de Fotos</div>
+                        <div class="card-description">Ver fotos con marca de agua, seleccionar y comprar</div>
+                        <span class="card-badge new">Nuevo</span>
+                    </a>
+                    <a href="/success.html" class="card" target="_blank">
+                        <div class="card-icon">✅</div>
+                        <div class="card-title">Página de Éxito</div>
+                        <div class="card-description">Confirmación de compra exitosa</div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- PANEL ADMIN -->
+            <div class="category">
+                <h2 class="category-title">⚙️ Panel de Administración</h2>
+                <div class="cards-grid">
+                    <a href="/admin/admin_dashboard.html" class="card" target="_blank">
+                        <div class="card-icon">📊</div>
+                        <div class="card-title">Dashboard Principal</div>
+                        <div class="card-description">Panel de control del fotógrafo (requiere login)</div>
+                    </a>
+                    <a href="/admin/monitoring.html" class="card" target="_blank">
+                        <div class="card-icon">📈</div>
+                        <div class="card-title">Sistema de Monitoring</div>
+                        <div class="card-description">Monitoreo de servidor, logs y métricas</div>
+                    </a>
+                    <a href="/admin/subscription.html" class="card" target="_blank">
+                        <div class="card-icon">💳</div>
+                        <div class="card-title">Suscripciones</div>
+                        <div class="card-description">Gestión de planes y pagos recurrentes</div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- PÁGINAS DE INFORMACIÓN -->
+            <div class="category">
+                <h2 class="category-title">ℹ️ Información y Soporte</h2>
+                <div class="cards-grid">
+                    <a href="/comofunciona.html" class="card" target="_blank">
+                        <div class="card-icon">❓</div>
+                        <div class="card-title">Cómo Funciona</div>
+                        <div class="card-description">Explicación del proceso de compra</div>
+                    </a>
+                    <a href="/contacto.html" class="card" target="_blank">
+                        <div class="card-icon">📧</div>
+                        <div class="card-title">Contacto</div>
+                        <div class="card-description">Formulario de contacto y soporte</div>
+                    </a>
+                    <a href="/gallery.html" class="card" target="_blank">
+                        <div class="card-icon">🎨</div>
+                        <div class="card-title">Galería General</div>
+                        <div class="card-description">Vista general de todas las galerías</div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- TESTS DE PAGOS -->
+            <div class="category">
+                <h2 class="category-title">💰 Tests de Pagos (MercadoPago)</h2>
+                <div class="cards-grid">
+                    <a href="/tests/test_payment.html" class="card" target="_blank">
+                        <div class="card-icon">💳</div>
+                        <div class="card-title">Test de Pago</div>
+                        <div class="card-description">Prueba de integración con MercadoPago</div>
+                        <span class="card-badge test">Test</span>
+                    </a>
+                    <a href="/tests/simple_payment_test.html" class="card" target="_blank">
+                        <div class="card-icon">💵</div>
+                        <div class="card-title">Test Simple de Pago</div>
+                        <div class="card-description">Versión simplificada del test de pagos</div>
+                        <span class="card-badge test">Test</span>
+                    </a>
+                    <a href="/tests/test_simulate_payment.html" class="card" target="_blank">
+                        <div class="card-icon">🎭</div>
+                        <div class="card-title">Simulador de Pago</div>
+                        <div class="card-description">Simular flujo completo de pago</div>
+                        <span class="card-badge test">Test</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- TESTS Y DESARROLLO -->
+            <div class="category">
+                <h2 class="category-title">🔧 Páginas de Desarrollo y Test</h2>
+                <div class="cards-grid">
+                    <a href="/tests/logintest.html" class="card" target="_blank">
+                        <div class="card-icon">🔓</div>
+                        <div class="card-title">Login Test (Legacy)</div>
+                        <div class="card-description">Página de prueba de login antigua</div>
+                        <span class="card-badge test">Test</span>
+                    </a>
+                    <a href="/tests/resgistertest.html" class="card" target="_blank">
+                        <div class="card-icon">📋</div>
+                        <div class="card-title">Register Test (Legacy)</div>
+                        <div class="card-description">Página de prueba de registro antigua</div>
+                        <span class="card-badge test">Test</span>
+                    </a>
+                    <a href="/tests/download_test.html" class="card" target="_blank">
+                        <div class="card-icon">⬇️</div>
+                        <div class="card-title">Test de Descarga</div>
+                        <div class="card-description">Prueba de descarga de archivos</div>
+                        <span class="card-badge test">Test</span>
+                    </a>
+                    <a href="/tests/testindex.html" class="card" target="_blank">
+                        <div class="card-icon">🧪</div>
+                        <div class="card-title">Test Index</div>
+                        <div class="card-description">Página de prueba en raíz</div>
+                        <span class="card-badge test">Test</span>
+                    </a>
+                    <a href="/tests/testindex.html" class="card" target="_blank">
+                        <div class="card-icon">🧪</div>
+                        <div class="card-title">Test Index (Tests)</div>
+                        <div class="card-description">Página de prueba en carpeta tests</div>
+                        <span class="card-badge test">Test</span>
+                    </a>
+                    <a href="/tests/indexsegundo.html" class="card" target="_blank">
+                        <div class="card-icon">🎨</div>
+                        <div class="card-title">Index Segundo</div>
+                        <div class="card-description">Versión alternativa del index</div>
+                        <span class="card-badge test">Test</span>
+                    </a>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p><strong>Fotografo SERVER</strong> - Sistema Multi-Tenant</p>
+            <p>Proyecto organizado y refactorizado | Node.js + Express + Supabase + MercadoPago</p>
+        </footer>
+    </div>
+
+    <script>
+        // Check server status
+        fetch('http://localhost:3000/status')
+            .then(response => {
+                if (response.ok) {
+                    console.log('✅ Servidor funcionando correctamente');
+                } else {
+                    console.warn('⚠️ Servidor respondió con error');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Servidor no disponible:', error);
+                document.querySelector('.status-dot').style.background = '#ef4444';
+            });
+    </script>
+</body>
+</html>
