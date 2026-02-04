@@ -1,82 +1,8 @@
-# SchoolSnap - Plataforma de Fotografía Escolar
+# SchoolSnap
 
-Plataforma backend para gestión de fotografías escolares con Mercado Pago y Supabase.
+Este proyecto es una plataforma para gestionar fotos escolares con un backend en Node.js y un panel web de administración. Incluye páginas públicas, login de fotógrafos y un panel con métricas y pedidos.
 
-## 📁 Estructura del Proyecto
-
-```
-📦 Fotografo SERVER/
-├── 📂 src/                      # Código fuente del backend
-│   ├── 📂 config/              # Configuraciones
-│   ├── 📂 controllers/         # Controladores (lógica de negocio)
-│   ├── 📂 middleware/          # Middlewares de Express
-│   │   └── auth.js            # Autenticación
-│   ├── 📂 models/              # Modelos de datos
-│   ├── 📂 routes/              # Rutas de la API
-│   │   ├── auth.js            # Rutas de autenticación
-│   │   └── subscriptions.js   # Rutas de suscripciones
-│   ├── 📂 services/            # Servicios y lógica de negocio
-│   ├── 📂 migrations/          # Migraciones de base de datos
-│   └── server.js              # Archivo principal del servidor
-│
-├── 📂 public/                   # Archivos estáticos públicos
-│   ├── index.html              # Landing page principal
-│   ├── gallery.html            # Galería de fotos
-│   ├── success.html            # Página de éxito de pago
-│   ├── register.html           # Registro de fotógrafos
-│   ├── comofunciona.html       # Información
-│   ├── contacto.html           # Contacto
-│   ├── 📂 admin/               # Panel de administración
-│   ├── 📂 assets/              # CSS e imágenes públicas
-│   ├── 📂 js/                  # JavaScript del frontend
-│   └── 📂 tests/               # Páginas HTML de prueba
-│
-├── 📂 tests/                    # Tests del backend
-│   ├── register.test.js        # Test de registro
-│   ├── security.test.js        # Test de seguridad
-│   └── test-server.js          # Servidor de pruebas
-│
-├── 📂 scripts/                  # Scripts de utilidades
-│   ├── backup.js               # Script de backup de DB
-│   └── check-env.js            # Verificación de variables de entorno
-│
-├── 📂 docs/                     # Documentación
-│   ├── DATABASE_MULTITENANT.md
-│   ├── MONITORING_README.md
-│   ├── REFACTORING_MULTITENANT.md
-│   └── SECURITY_README.md
-│
-├── 📂 assets/                   # Assets del servidor (watermarks, etc.)
-├── 📂 backups/                  # Backups de la base de datos
-├── .env                         # Variables de entorno (NO en git)
-├── .env.example                 # Ejemplo de variables de entorno
-├── package.json                 # Dependencias del proyecto
-└── README.md                    # Este archivo
-```
-
-## 🚀 Inicio Rápido
-
-### Instalación
-
-```bash
-npm install
-```
-
-### Variables de Entorno
-
-Copia `.env.example` a `.env` y configura tus variables:
-
-```bash
-cp .env.example .env
-```
-
-Variables requeridas:
-- `SUPABASE_URL` - URL de tu proyecto Supabase
-- `SUPABASE_KEY` - API Key de Supabase
-- `MERCADOPAGO_ACCESS_TOKEN` - Token de acceso de Mercado Pago
-- `MERCADOPAGO_WEBHOOK_SECRET` - Secret del webhook
-
-### Ejecutar el Servidor
+Para correrlo en local, instalá dependencias con npm install, configurá tu .env y luego ejecutá npm start.
 
 ```bash
 # Modo desarrollo

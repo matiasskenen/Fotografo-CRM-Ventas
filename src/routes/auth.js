@@ -1,21 +1,70 @@
+// src/routes/auth.js - VERSIÓN LOCAL SIN BASE DE DATOS
 const express = require('express');
 const router = express.Router();
-const { createClient } = require('@supabase/supabase-js');
-
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 // ========================================
-// AUTENTICACIÓN
+// USUARIOS HARDCODEADOS PARA DESARROLLO LOCAL
+// ========================================
+const MOCK_USERS = {
+    'admin@test.com': {
+        id: 'photographer-1',
+        email: 'admin@test.com',
+        password: 'admin123', // En producción NUNCA hacer esto
+        auth_user_id: 'auth-user-1',
+        business_name: 'Fotografía Test',
+        display_name: 'Admin Demo',
+        slug: 'admin-demo',
+        plan_type: 'pro',
+        subscription_status: 'active',
+        role: 'photographer',
+        created_at: new Date().toISOString(),
+        last_login_at: new Date().toISOString()
+    },
+    'foto@test.com': {
+        id: 'photographer-2',
+        email: 'foto@test.com',
+        password: '12345678',
+        auth_user_id: 'auth-user-2',
+        business_name: 'Estudio Fotográfico',
+        display_name: 'Fotógrafo Pro',
+        slug: 'fotografo-pro',
+        plan_type: 'pro',
+        subscription_status: 'active',
+        role: 'photographer',
+        created_at: new Date().toISOString(),
+        last_login_at: new Date().toISOString()
+    }
+};
+
+// Token simple para desarrollo local (NO usar en producción)
+function generateMockToken(user) {
+    const payload = {
+        userId: user.auth_user_id,
+        email: user.email,
+        photographerId: user.id,
+        timestamp: Date.now()
+    };
+    return Buffer.from(JSON.stringify(payload)).toString('base64');
+}
+
+function verifyMockToken(token) {
+    try {
+        const payload = JSON.parse(Buffer.from(token, 'base64').toString());
+        return payload;
+    } catch {
+        return null;
+    }
+}
+
+// ========================================
+// RUTAS DE AUTENTICACIÓN
 // ========================================
 
-// POST /auth/register - Registro de nuevo fotógrafo
+// POST /auth/register - Registro (simulado)
 router.post('/register', async (req, res) => {
     try {
         const { email, password, businessName, displayName, phone } = req.body;
 
-        // Validaciones
         if (!email || !password || !businessName || !displayName) {
             return res.status(400).json({ 
                 error: 'Email, contraseña, nombre del negocio y nombre para mostrar son requeridos' 
@@ -28,90 +77,45 @@ router.post('/register', async (req, res) => {
             });
         }
 
-        // 1. Crear usuario en auth.users
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        // Verificar si el usuario ya existe
+        if (MOCK_USERS[email.toLowerCase()]) {
+            return res.status(400).json({ 
+                error: 'El email ya está registrado' 
+            });
+        }
+
+        // Simular creación de usuario
+        const newUser = {
+            id: `photographer-${Date.now()}`,
             email: email.toLowerCase(),
             password: password,
-            email_confirm: true, // Auto-confirmar email (cambiar en producción)
-            user_metadata: {
-                business_name: businessName,
-                display_name: displayName,
-                role: 'photographer'
-            }
-        });
+            auth_user_id: `auth-user-${Date.now()}`,
+            business_name: businessName,
+            display_name: displayName,
+            slug: displayName.toLowerCase().replace(/\s+/g, '-'),
+            plan_type: 'pro',
+            subscription_status: 'trial',
+            role: 'photographer',
+            phone: phone || null,
+            created_at: new Date().toISOString(),
+            trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
+        };
 
-        if (authError) {
-            console.error('Error creando usuario:', authError);
-            return res.status(400).json({ 
-                error: authError.message || 'Error al crear usuario' 
-            });
-        }
+        MOCK_USERS[email.toLowerCase()] = newUser;
 
-        // 2. Generar slug único
-        const baseSlug = displayName
-            .toLowerCase()
-            .replace(/[^a-z0-9\s-]/g, '')
-            .replace(/\s+/g, '-')
-            .trim();
-
-        let slug = baseSlug;
-        let counter = 0;
-        let slugExists = true;
-
-        while (slugExists) {
-            const { data: existing } = await supabaseAdmin
-                .from('photographers')
-                .select('id')
-                .eq('slug', slug)
-                .single();
-
-            if (!existing) {
-                slugExists = false;
-            } else {
-                counter++;
-                slug = `${baseSlug}-${counter}`;
-            }
-        }
-
-        // 3. Crear perfil de fotógrafo
-        const { data: photographer, error: photographerError } = await supabaseAdmin
-            .from('photographers')
-            .insert({
-                auth_user_id: authData.user.id,
-                business_name: businessName,
-                display_name: displayName,
-                slug: slug,
-                email: email.toLowerCase(),
-                phone: phone || null,
-                plan_type: 'pro', // Plan por defecto
-                subscription_status: 'trial', // 14 días de prueba
-                trial_ends_at: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString()
-            })
-            .select()
-            .single();
-
-        if (photographerError) {
-            console.error('Error creando perfil de fotógrafo:', photographerError);
-            
-            // Rollback: eliminar usuario de auth
-            await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-            
-            return res.status(500).json({ 
-                error: 'Error al crear perfil de fotógrafo' 
-            });
-        }
+        console.log('✅ Usuario registrado (LOCAL):', email);
 
         res.status(201).json({
             message: 'Registro exitoso. Tienes 14 días de prueba gratis.',
             photographer: {
-                id: photographer.id,
-                email: photographer.email,
-                businessName: photographer.business_name,
-                displayName: photographer.display_name,
-                slug: photographer.slug,
-                planType: photographer.plan_type,
-                subscriptionStatus: photographer.subscription_status,
-                trialEndsAt: photographer.trial_ends_at
+                id: newUser.id,
+                email: newUser.email,
+                businessName: newUser.business_name,
+                displayName: newUser.display_name,
+                slug: newUser.slug,
+                planType: newUser.plan_type,
+                subscriptionStatus: newUser.subscription_status,
+                trialEndsAt: newUser.trial_ends_at
             }
         });
 
@@ -123,189 +127,143 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// POST /auth/login - Login de fotógrafo
+// POST /auth/login - Login (hardcodeado)
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        if (!email || !password) {
-            return res.status(400).json({ 
-                error: 'Email y contraseña son requeridos' 
+        console.log('🔐 Intento de login:', email);
+
+        // Si no se proporciona email o password, usar valores por defecto
+        const loginEmail = (email || 'admin@test.com').toLowerCase();
+        const loginPassword = password || 'admin123';
+
+        // Buscar usuario
+        const user = MOCK_USERS[loginEmail];
+
+        if (!user) {
+            console.log('❌ Usuario no encontrado:', loginEmail);
+            return res.status(401).json({ 
+                error: 'Credenciales inválidas',
+                hint: 'Usuarios disponibles: admin@test.com (admin123), foto@test.com (12345678)'
             });
         }
 
-        // 1. Verificar credenciales usando admin API
-        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserByEmail(email.toLowerCase());
-
-        if (authError || !authData.user) {
+        // Verificar password
+        if (user.password !== loginPassword) {
+            console.log('❌ Password incorrecta');
             return res.status(401).json({ 
                 error: 'Credenciales inválidas' 
             });
         }
 
-        // Verificar password usando signInWithPassword del cliente anon
-        const supabase = createClient(supabaseUrl, process.env.SUPABASE_ANON_KEY);
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email: email.toLowerCase(),
-            password: password
-        });
+        // Actualizar last login
+        user.last_login_at = new Date().toISOString();
 
-        if (signInError) {
-            return res.status(401).json({ 
-                error: 'Credenciales inválidas' 
-            });
-        }
+        // Generar token
+        const token = generateMockToken(user);
 
-        // 2. Obtener perfil de fotógrafo
-        const { data: photographer, error: photographerError } = await supabaseAdmin
-            .from('photographers')
-            .select('*')
-            .eq('auth_user_id', authData.user.id)
-            .single();
+        console.log('✅ Login exitoso:', loginEmail);
 
-        if (photographerError || !photographer) {
-            return res.status(404).json({ 
-                error: 'Perfil de fotógrafo no encontrado' 
-            });
-        }
-
-        // 3. Verificar estado de suscripción
-        const now = new Date();
-        const trialEnded = photographer.trial_ends_at && new Date(photographer.trial_ends_at) < now;
-        const subscriptionExpired = photographer.subscription_expires_at && 
-                                    new Date(photographer.subscription_expires_at) < now;
-
-        if (trialEnded && subscriptionExpired) {
-            await supabaseAdmin
-                .from('photographers')
-                .update({ subscription_status: 'expired' })
-                .eq('id', photographer.id);
-
-            return res.status(403).json({
-                error: 'Tu período de prueba ha expirado. Por favor, suscríbete para continuar.',
-                needsSubscription: true,
-                photographer: {
-                    id: photographer.id,
-                    email: photographer.email,
-                    subscriptionStatus: 'expired'
-                }
-            });
-        }
-
-        // 4. Actualizar last_login_at
-        await supabaseAdmin
-            .from('photographers')
-            .update({ last_login_at: new Date().toISOString() })
-            .eq('id', photographer.id);
-
-        res.status(200).json({
+        res.json({
             message: 'Login exitoso',
-            photographer: {
-                id: photographer.id,
-                email: photographer.email,
-                businessName: photographer.business_name,
-                displayName: photographer.display_name,
-                slug: photographer.slug,
-                planType: photographer.plan_type,
-                subscriptionStatus: photographer.subscription_status,
-                trialEndsAt: photographer.trial_ends_at,
-                subscriptionExpiresAt: photographer.subscription_expires_at,
-                profileImageUrl: photographer.profile_image_url,
-                stats: {
-                    totalAlbums: photographer.total_albums,
-                    totalPhotos: photographer.total_photos,
-                    totalSales: photographer.total_sales,
-                    rating: photographer.rating
-                }
+            access_token: token,
+            token_type: 'bearer',
+            expires_in: 3600,
+            user: {
+                id: user.auth_user_id,
+                email: user.email,
+                role: user.role
             },
-            session: signInData.session
+            photographer: {
+                id: user.id,
+                email: user.email,
+                businessName: user.business_name,
+                displayName: user.display_name,
+                slug: user.slug,
+                planType: user.plan_type,
+                subscriptionStatus: user.subscription_status,
+                createdAt: user.created_at,
+                lastLoginAt: user.last_login_at
+            },
+            session: {
+                access_token: token,
+                token_type: 'bearer',
+                expires_in: 3600,
+                user: {
+                    id: user.auth_user_id,
+                    email: user.email
+                }
+            }
         });
 
     } catch (error) {
         console.error('Error en login:', error);
+        res.status(500).json({ 
+            error: 'Error interno del servidor',
+            details: error.message
+        });
+    }
+});
+
+// POST /auth/logout
+router.post('/logout', (req, res) => {
+    res.json({ message: 'Logout exitoso' });
+});
+
+// GET /auth/me - Obtener perfil actual
+router.get('/me', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ 
+                error: 'Token requerido' 
+            });
+        }
+
+        const token = authHeader.substring(7);
+        const payload = verifyMockToken(token);
+
+        if (!payload) {
+            return res.status(401).json({ 
+                error: 'Token inválido' 
+            });
+        }
+
+        // Buscar usuario por email
+        const user = Object.values(MOCK_USERS).find(u => u.email === payload.email);
+
+        if (!user) {
+            return res.status(404).json({ 
+                error: 'Usuario no encontrado' 
+            });
+        }
+
+        res.json({
+            user: {
+                id: user.auth_user_id,
+                email: user.email,
+                role: user.role
+            },
+            photographer: {
+                id: user.id,
+                email: user.email,
+                businessName: user.business_name,
+                displayName: user.display_name,
+                slug: user.slug,
+                planType: user.plan_type,
+                subscriptionStatus: user.subscription_status
+            }
+        });
+
+    } catch (error) {
+        console.error('Error en /me:', error);
         res.status(500).json({ 
             error: 'Error interno del servidor' 
         });
     }
 });
 
-// POST /auth/logout
-router.post('/logout', async (req, res) => {
-    try {
-        const token = req.headers.authorization?.replace('Bearer ', '');
-        
-        if (token) {
-            await supabaseAdmin.auth.signOut(token);
-        }
-
-        res.status(200).json({ message: 'Logout exitoso' });
-    } catch (error) {
-        console.error('Error en logout:', error);
-        res.status(500).json({ error: 'Error al cerrar sesión' });
-    }
-});
-
-// GET /auth/me - Obtener datos del usuario actual
-router.get('/me', async (req, res) => {
-    try {
-        const token = req.headers.authorization?.replace('Bearer ', '');
-        
-        if (!token) {
-            return res.status(401).json({ error: 'Token no proporcionado' });
-        }
-
-        // Verificar token
-        const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-
-        if (authError || !user) {
-            return res.status(401).json({ error: 'Token inválido' });
-        }
-
-        // Obtener perfil
-        const { data: photographer, error: photographerError } = await supabaseAdmin
-            .from('photographers')
-            .select('*')
-            .eq('auth_user_id', user.id)
-            .single();
-
-        if (photographerError || !photographer) {
-            return res.status(404).json({ error: 'Perfil no encontrado' });
-        }
-
-        res.status(200).json({
-            photographer: {
-                id: photographer.id,
-                email: photographer.email,
-                businessName: photographer.business_name,
-                displayName: photographer.display_name,
-                slug: photographer.slug,
-                bio: photographer.bio,
-                profileImageUrl: photographer.profile_image_url,
-                planType: photographer.plan_type,
-                subscriptionStatus: photographer.subscription_status,
-                trialEndsAt: photographer.trial_ends_at,
-                subscriptionExpiresAt: photographer.subscription_expires_at,
-                phone: photographer.phone,
-                website: photographer.website,
-                defaultPricePerPhoto: photographer.default_price_per_photo,
-                watermarkText: photographer.watermark_text,
-                stats: {
-                    totalAlbums: photographer.total_albums,
-                    totalPhotos: photographer.total_photos,
-                    totalSales: photographer.total_sales,
-                    rating: photographer.rating,
-                    totalReviews: photographer.total_reviews
-                },
-                isVerified: photographer.is_verified,
-                isFeatured: photographer.is_featured,
-                createdAt: photographer.created_at
-            }
-        });
-
-    } catch (error) {
-        console.error('Error obteniendo perfil:', error);
-        res.status(500).json({ error: 'Error interno del servidor' });
-    }
-});
-
 module.exports = router;
+module.exports.MOCK_USERS = MOCK_USERS;
+module.exports.verifyMockToken = verifyMockToken;

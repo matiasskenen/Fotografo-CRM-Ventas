@@ -95,11 +95,11 @@
         <form id="loginForm">
             <div class="mb-5 text-left">
                 <label for="email" class="block text-gray-700 text-sm font-medium mb-2">Email:</label>
-                <input type="email" id="email" class="input-field" required placeholder="tu_email@ejemplo.com">
+                <input type="email" id="email" class="input-field" value="admin@test.com" placeholder="admin@test.com">
             </div>
             <div class="mb-6 text-left">
                 <label for="password" class="block text-gray-700 text-sm font-medium mb-2">Contraseña:</label>
-                <input type="password" id="password" class="input-field" required placeholder="Tu contraseña segura">
+                <input type="password" id="password" class="input-field" value="admin123" placeholder="admin123">
             </div>
             <button type="submit" id="loginButton" class="btn-primary flex items-center justify-center">
                 <span id="loading-spinner" class="loading-spinner hidden"></span>
@@ -139,21 +139,16 @@
         };
 
         loginForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); // Evita el envío tradicional del formulario
+            event.preventDefault();
 
-            const email = emailInput.value.trim();
-            const password = passwordInput.value.trim();
-
-            if (!email || !password) {
-                showMessage('Por favor, ingresa tu email y contraseña.', 'error');
-                return;
-            }
+            const email = emailInput.value.trim() || 'admin@test.com';
+            const password = passwordInput.value.trim() || 'admin123';
 
             setLoading(true);
-            hideMessage(); // Ocultar mensajes anteriores
+            hideMessage();
 
             try {
-                const response = await fetch(`${BACKEND_URL}/login`, {
+                const response = await fetch(`${BACKEND_URL}/auth/login`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -166,9 +161,17 @@
                 if (response.ok) {
                     showMessage('Inicio de sesión exitoso. Redirigiendo al panel...', 'success');
                     
-                    // Guardar token JWT y datos del fotógrafo en localStorage
-                    if (data.session && data.session.access_token) {
-                        localStorage.setItem('auth_token', data.session.access_token);
+                    // Guardar token y datos del fotógrafo
+                    const token = data.access_token || data.session?.access_token || data.token;
+                    
+                    localStorage.setItem('photographer_token', token);
+                    localStorage.setItem('photographer_id', data.photographer.id);
+                    localStorage.setItem('photographer_name', data.photographer.businessName || data.photographer.display_name);
+                    localStorage.setItem('photographer_email', data.photographer.email);
+                    
+                    // También guardar en formato antiguo por compatibilidad
+                    if (data.session) {
+                        localStorage.setItem('auth_token', token);
                         localStorage.setItem('session', JSON.stringify(data.session));
                     }
                     
@@ -176,20 +179,19 @@
                         localStorage.setItem('photographer', JSON.stringify(data.photographer));
                     }
 
-                    console.log('Usuario logueado:', data.photographer);
-                    console.log('Token guardado');
+                    console.log('✅ Usuario logueado:', data.photographer);
 
                     // Redirigir al panel de administración
                     setTimeout(() => {
                         window.location.href = '/admin/admin_dashboard.html';
-                    }, 1000);
+                    }, 500);
                 } else {
-                    showMessage(data.message || 'Error al iniciar sesión. Credenciales inválidas.', 'error');
+                    showMessage(data.error || data.message || 'Error al iniciar sesión', 'error');
                     console.error('Error de login:', data);
                 }
             } catch (error) {
                 console.error('Error de red o del servidor:', error);
-                showMessage(`Error de conexión: ${error.message}. Asegúrate de que el backend esté funcionando.`, 'error');
+                showMessage(`Error de conexión: ${error.message}`, 'error');
             } finally {
                 setLoading(false);
             }

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SchoolSnap - Acceso Fotógrafos</title>
+    <title>FotoEscuela - Acceso Fotógrafos</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
@@ -27,7 +27,7 @@
                     <div class="bg-blue-600 p-1.5 rounded-lg text-white">
                         <i data-lucide="camera" class="w-4 h-4"></i>
                     </div>
-                    <span class="font-bold text-lg tracking-tight text-slate-900">SchoolSnap</span>
+                    <span class="font-bold text-lg tracking-tight text-slate-900">FotoEscuela</span>
                 </a>
                 
                 <a href="/photographer-register.html" class="text-sm font-medium text-slate-500 hover:text-blue-600 transition">
@@ -64,10 +64,10 @@
                                 type="email" 
                                 id="email" 
                                 name="email" 
-                                required
+                                value="admin@test.com"
                                 autocomplete="email"
                                 class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition" 
-                                placeholder="nombre@ejemplo.com"
+                                placeholder="admin@test.com"
                             >
                         </div>
                     </div>
@@ -86,10 +86,10 @@
                                 type="password" 
                                 id="password" 
                                 name="password" 
-                                required
+                                value="admin123"
                                 autocomplete="current-password"
                                 class="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition" 
-                                placeholder="••••••••"
+                                placeholder="admin123"
                             >
                         </div>
                     </div>
@@ -196,16 +196,10 @@
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
+            const email = document.getElementById('email').value.trim() || 'admin@test.com';
+            const password = document.getElementById('password').value || 'admin123';
             const rememberMe = document.getElementById('remember-me').checked;
             const loginBtn = document.getElementById('loginBtn');
-
-            // Validación básica
-            if (!email || !password) {
-                showError('Por favor completa todos los campos.');
-                return;
-            }
 
             // Deshabilitar botón durante el proceso
             loginBtn.disabled = true;
@@ -222,12 +216,16 @@
 
                 const data = await response.json();
 
-                if (response.ok && data.success) {
+                if (response.ok) {
                     // Guardar token y datos del usuario
                     const storage = rememberMe ? localStorage : sessionStorage;
-                    storage.setItem('photographer_token', data.token);
+                    
+                    // Verificar si tenemos access_token o token
+                    const token = data.access_token || data.session?.access_token || data.token;
+                    
+                    storage.setItem('photographer_token', token);
                     storage.setItem('photographer_id', data.photographer.id);
-                    storage.setItem('photographer_name', data.photographer.business_name);
+                    storage.setItem('photographer_name', data.photographer.businessName || data.photographer.display_name);
                     storage.setItem('photographer_email', data.photographer.email);
 
                     showSuccess('¡Inicio de sesión exitoso! Redirigiendo...');
@@ -235,10 +233,10 @@
                     // Redirigir al dashboard
                     setTimeout(() => {
                         window.location.href = '/admin/admin_dashboard.html';
-                    }, 1500);
+                    }, 1000);
 
                 } else {
-                    showError(data.message || 'Email o contraseña incorrectos.');
+                    showError(data.error || data.message || 'Error al iniciar sesión');
                     loginBtn.disabled = false;
                     loginBtn.textContent = 'Iniciar Sesión';
                 }
