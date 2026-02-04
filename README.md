@@ -1,4 +1,4 @@
-# SchoolSnap
+# FotoEscolar
 
 Este proyecto es una plataforma para gestionar fotos escolares con un backend en Node.js y un panel web de administración. Incluye páginas públicas, login de fotógrafos y un panel con métricas y pedidos.
 
